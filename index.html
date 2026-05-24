@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Sum Checker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 600px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #777;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .label {
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 12px;
+      display: block;
+      font-size: 15px;
+    }
+
+    .inputs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .number-input {
+      width: 70px;
+      height: 70px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      border: 3px solid #667eea;
+      border-radius: 12px;
+      color: #333;
+      background: #f8f9ff;
+      transition: all 0.2s;
+    }
+
+    .number-input:focus {
+      outline: none;
+      border-color: #764ba2;
+      background: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(118, 75, 162, 0.3);
+    }
+
+    /* Hide spinner arrows */
+    .number-input::-webkit-outer-spin-button,
+    .number-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .number-input { -moz-appearance: textfield; }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .calc-btn, .clear-btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .calc-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .calc-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4);
+    }
+
+    .clear-btn {
+      background: #f0f0f0;
+      color: #555;
+    }
+
+    .clear-btn:hover {
+      background: #e0e0e0;
+    }
+
+    .sum-box {
+      background: linear-gradient(135deg, #f5f7fa, #e8ecf3);
+      border: 2px dashed #667eea;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .sum-label {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .sum-value {
+      font-size: 42px;
+      font-weight: 800;
+      color: #764ba2;
+      letter-spacing: 2px;
+    }
+
+    .results-label {
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .result-box {
+      padding: 22px 10px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      background: #f0f0f0;
+      color: #999;
+      border: 3px solid transparent;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-box.active {
+      background: linear-gradient(135deg, #00c853, #64dd17);
+      color: white;
+      border-color: #1b5e20;
+      box-shadow: 0 0 25px rgba(0, 200, 83, 0.6);
+      transform: scale(1.05);
+    }
+
+    .result-box.active::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #fff;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .error-msg {
+      color: #d32f2f;
+      text-align: center;
+      font-size: 13px;
+      margin-top: 10px;
+      min-height: 18px;
+    }
+
+    @media (max-width: 480px) {
+      .number-input {
+        width: 55px;
+        height: 55px;
+        font-size: 22px;
+      }
+      .sum-value { font-size: 32px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔢 Number Sum Checker</h1>
+    <p class="subtitle">Enter 5 numbers and find out the result</p>
+
+    <label class="label">Enter 5 numbers:</label>
+    <div class="inputs">
+      <input type="number" class="number-input" data-index="0" />
+      <input type="number" class="number-input" data-index="1" />
+      <input type="number" class="number-input" data-index="2" />
+      <input type="number" class="number-input" data-index="3" />
+      <input type="number" class="number-input" data-index="4" />
+    </div>
+
+    <div class="button-row">
+      <button class="calc-btn" id="calcBtn">Calculate</button>
+      <button class="clear-btn" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="sum-box">
+      <div class="sum-label">Sum of all numbers:</div>
+      <div class="sum-value" id="sumValue">--</div>
+    </div>
+
+    <p class="results-label">Result (correct ones will glow green ✅):</p>
+    <div class="results">
+      <div class="result-box" id="large">Large</div>
+      <div class="result-box" id="small">Smaller</div>
+      <div class="result-box" id="odd">Odd</div>
+      <div class="result-box" id="even">Even</div>
+    </div>
+  </div>
+
+  <script>
+    const inputs = document.querySelectorAll('.number-input');
+    const calcBtn = document.getElementById('calcBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const sumValue = document.getElementById('sumValue');
+    const errorMsg = document.getElementById('errorMsg');
+
+    const boxes = {
+      large: document.getElementById('large'),
+      small: document.getElementById('small'),
+      odd: document.getElementById('odd'),
+      even: document.getElementById('even'),
+    };
+
+    // Threshold for Large vs Smaller.
+    // Default: based on last digit of sum (0-4 = Smaller, 5-9 = Large)
+    // You can change this logic easily.
+    function isLarge(sum) {
+      return (sum % 10) >= 5;
+    }
+
+    // Auto-jump to next input as user types
+    inputs.forEach((inp, i) => {
+      inp.addEventListener('input', () => {
+        if (inp.value.length >= 1 && i < inputs.length - 1) {
+          inputs[i + 1].focus();
+        }
+      });
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') calculate();
+        if (e.key === 'Backspace' && !inp.value && i > 0) {
+          inputs[i - 1].focus();
+        }
+      });
+    });
+
+    function resetBoxes() {
+      Object.values(boxes).forEach(b => b.classList.remove('active'));
+    }
+
+    function calculate() {
+      errorMsg.textContent = '';
+      resetBoxes();
+
+      const values = [];
+      for (const inp of inputs) {
+        if (inp.value.trim() === '') {
+          errorMsg.textContent = '⚠️ Please fill all 5 boxes';
+          sumValue.textContent = '--';
+          return;
+        }
+        const n = Number(inp.value);
+        if (Number.isNaN(n)) {
+          errorMsg.textContent = '⚠️ Only numbers allowed';
+          sumValue.textContent = '--';
+          return;
+        }
+        values.push(n);
+      }
+
+      const sum = values.reduce((a, b) => a + b, 0);
+      sumValue.textContent = sum;
+
+      // Light up the correct boxes
+      if (isLarge(sum)) boxes.large.classList.add('active');
+      else boxes.small.classList.add('active');
+
+      if (sum % 2 === 0) boxes.even.classList.add('active');
+      else boxes.odd.classList.add('active');
+    }
+
+    function clearAll() {
+      inputs.forEach(i => (i.value = ''));
+      sumValue.textContent = '--';
+      errorMsg.textContent = '';
+      resetBoxes();
+      inputs[0].focus();
+    }
+
+    calcBtn.addEventListener('click', calculate);
+    clearBtn.addEventListener('click', clearAll);
+
+    // Focus first input on load
+    inputs[0].focus();
+  </script>
+</body>
+</html>
