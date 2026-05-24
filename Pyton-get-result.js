@@ -39,14 +39,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetchBtn.addEventListener("click", handleFetch);
 
-  /* Size toggle buttons */
+  /* ── Number buttons (0–9) ── */
+  document.querySelectorAll(".num-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest(".trend-row");
+      row.querySelectorAll(".num-btn").forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      row.querySelector(".num-hidden").value = btn.dataset.value;
+      /* clear error highlight on this row */
+      clearError(row);
+      hideGlobalError();
+    });
+  });
+
+  /* ── Color buttons ── */
+  document.querySelectorAll(".color-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest(".trend-row");
+      row.querySelectorAll(".color-btn").forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      row.querySelector(".color-hidden").value = btn.dataset.value;
+      clearError(row);
+      hideGlobalError();
+    });
+  });
+
+  /* ── Size buttons ── */
   document.querySelectorAll(".size-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const row = btn.closest(".trend-row");
       row.querySelectorAll(".size-btn").forEach((b) => b.classList.remove("selected"));
       btn.classList.add("selected");
-      /* Store chosen value in the hidden input */
       row.querySelector(".size-hidden").value = btn.dataset.value;
+      clearError(row);
+      hideGlobalError();
     });
   });
 });
@@ -75,41 +101,41 @@ async function handleFetch() {
 function collectRows() {
   const rows = [];
   let valid  = true;
+  let firstError = null;
 
   document.querySelectorAll(".trend-row").forEach((rowEl, idx) => {
-    const idInput     = rowEl.querySelector(".input-id");
-    const numInput    = rowEl.querySelector(".input-num");
-    const colorSelect = rowEl.querySelector(".input-color");
-    const sizeHidden  = rowEl.querySelector(".size-hidden");
+    const idInput    = rowEl.querySelector(".input-id");
+    const numHidden  = rowEl.querySelector(".num-hidden");
+    const colorHidden = rowEl.querySelector(".color-hidden");
+    const sizeHidden = rowEl.querySelector(".size-hidden");
 
     clearError(rowEl);
 
     const trendId = idInput.value.trim();
-    const num     = numInput.value.trim();
-    const color   = colorSelect.value;
+    const num     = numHidden.value;
+    const color   = colorHidden.value;
     const size    = sizeHidden.value;
 
-    if (!trendId || !num || !color || !size) {
-      markError(rowEl, `Row ${idx + 1}: all fields are required.`);
+    if (!trendId || num === "" || !color || !size) {
+      if (!firstError) firstError = `Row ${idx + 1}: all fields are required.`;
+      markRowError(rowEl);
       valid = false;
       return;
     }
 
     if (!/^\d+$/.test(trendId)) {
-      markError(rowEl, `Row ${idx + 1}: Trend ID must be numeric.`);
+      if (!firstError) firstError = `Row ${idx + 1}: Trend ID must be numeric.`;
+      markRowError(rowEl);
       valid = false;
       return;
     }
 
-    const numVal = parseInt(num, 10);
-    if (isNaN(numVal) || numVal < 0 || numVal > 9) {
-      markError(rowEl, `Row ${idx + 1}: Number must be 0–9.`);
-      valid = false;
-      return;
-    }
-
-    rows.push({ trendId, number: numVal, color, size });
+    rows.push({ trendId, number: parseInt(num, 10), color, size });
   });
+
+  if (!valid && firstError) {
+    showGlobalError(firstError);
+  }
 
   return valid ? rows : null;
 }
@@ -221,22 +247,39 @@ function buildHistoryChips(rows) {
 }
 
 /* ── Validation helpers ────────────────────────────────────────── */
-function markError(rowEl, msg) {
-  rowEl.querySelectorAll(".trend-input").forEach((el) => {
-    el.style.borderColor = "#ef4444";
-  });
-  /* show message in the global error bar */
-  const bar = document.getElementById("globalError");
-  if (bar) {
-    bar.textContent = msg;
-    bar.style.display = "block";
+function markRowError(rowEl) {
+  /* Highlight Trend ID input border */
+  const idInput = rowEl.querySelector(".input-id");
+  if (idInput) idInput.style.borderColor = "#ef4444";
+
+  /* Highlight button groups that have nothing selected */
+  const numHidden   = rowEl.querySelector(".num-hidden");
+  const colorHidden = rowEl.querySelector(".color-hidden");
+  const sizeHidden  = rowEl.querySelector(".size-hidden");
+
+  if (!numHidden.value) {
+    rowEl.querySelectorAll(".num-btn").forEach((b) => {
+      b.style.borderColor = "#ef4444";
+    });
+  }
+  if (!colorHidden.value) {
+    rowEl.querySelectorAll(".color-btn").forEach((b) => {
+      b.style.outline = "1px solid #ef4444";
+    });
+  }
+  if (!sizeHidden.value) {
+    rowEl.querySelectorAll(".size-btn").forEach((b) => {
+      b.style.borderColor = "#ef4444";
+    });
   }
 }
 
 function clearError(rowEl) {
-  rowEl.querySelectorAll(".trend-input").forEach((el) => {
-    el.style.borderColor = "";
-  });
+  const idInput = rowEl.querySelector(".input-id");
+  if (idInput) idInput.style.borderColor = "";
+  rowEl.querySelectorAll(".num-btn").forEach((b) => (b.style.borderColor = ""));
+  rowEl.querySelectorAll(".color-btn").forEach((b) => (b.style.outline = ""));
+  rowEl.querySelectorAll(".size-btn").forEach((b) => (b.style.borderColor = ""));
 }
 
 function showGlobalError(msg) {
@@ -245,4 +288,9 @@ function showGlobalError(msg) {
     bar.textContent = "⚠ " + msg;
     bar.style.display = "block";
   }
+}
+
+function hideGlobalError() {
+  const bar = document.getElementById("globalError");
+  if (bar) bar.style.display = "none";
 }

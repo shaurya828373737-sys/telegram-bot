@@ -133,10 +133,84 @@ select.trend-input option {
   background: #1a1a2e;
 }
 
+/* ---- Number Button Grid (0–9) ---- */
+.num-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.num-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2d2d4e;
+  border-radius: 5px;
+  background: #0f0f1a;
+  color: #666;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.num-btn:hover {
+  border-color: #a78bfa;
+  color: #a78bfa;
+  background: #1a0a3a;
+}
+
+.num-btn.selected {
+  background: #7c3aed;
+  border-color: #a78bfa;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(124,58,237,0.6);
+}
+
+/* ---- Color Button Group ---- */
+.color-group {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.color-btn {
+  flex: 1;
+  min-width: 46px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s;
+  user-select: none;
+  border: 2px solid transparent;
+}
+
+/* Unselected states — muted tint */
+.color-btn.red    { background: #2a0a0a; color: #a05050; border-color: #3d1515; }
+.color-btn.green  { background: #0a2a12; color: #4a9060; border-color: #153d22; }
+.color-btn.violet { background: #1a0a2e; color: #7060a0; border-color: #2d1550; }
+
+/* Hover */
+.color-btn.red:hover    { background: #4a1010; color: #fca5a5; border-color: #ef4444; }
+.color-btn.green:hover  { background: #0f3d1a; color: #86efac; border-color: #22c55e; }
+.color-btn.violet:hover { background: #2a0f4e; color: #d8b4fe; border-color: #a855f7; }
+
+/* Selected states — vivid */
+.color-btn.red.selected    { background: #991b1b; color: #fff; border-color: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+.color-btn.green.selected  { background: #15803d; color: #fff; border-color: #22c55e; box-shadow: 0 0 10px rgba(34,197,94,0.5); }
+.color-btn.violet.selected { background: #7e22ce; color: #fff; border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.5); }
+
 /* ---- Size Radio Buttons ---- */
 .size-group {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .size-btn {
@@ -150,7 +224,7 @@ select.trend-input option {
   font-weight: 600;
   cursor: pointer;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.18s;
   user-select: none;
 }
 
@@ -163,6 +237,7 @@ select.trend-input option {
   background: #a78bfa;
   border-color: #a78bfa;
   color: #0f0f1a;
+  box-shadow: 0 0 8px rgba(167,139,250,0.5);
 }
 
 /* ---- Action Button ---- */
@@ -389,18 +464,28 @@ select.trend-input option {
 }
 
 /* ---- Responsive ---- */
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .trend-table-head,
   .trend-row {
-    grid-template-columns: 40px 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: 32px 1fr;
+    grid-template-rows: auto auto auto auto;
   }
 
-  .trend-table-head .col-color,
-  .trend-table-head .col-size,
-  .trend-row .cell-color,
-  .trend-row .cell-size {
+  /* Stack all cells below Trend ID on mobile */
+  .trend-row .num-group,
+  .trend-row .color-group,
+  .trend-row .size-group {
+    grid-column: 2;
+  }
+
+  .trend-table-head span:not(:first-child):not(:nth-child(2)) {
     display: none;
+  }
+
+  .num-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
   }
 
   .result-grid {

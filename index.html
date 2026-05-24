@@ -28,25 +28,47 @@
       <span>#</span>
       <span>Trend ID</span>
       <span>Number (0–9)</span>
-      <span class="col-color">Color</span>
-      <span class="col-size">Size</span>
+      <span>Color</span>
+      <span>Size</span>
     </div>
 
     <!-- ── 10 Trend Rows ── -->
     <div id="trendRows">
 
+      <!-- Row template (×10) — each row identical except placeholder IDs -->
+
       <!-- Row 1 -->
       <div class="trend-row">
         <span class="row-num">1</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312612" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+
+        <!-- Trend ID -->
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312612" maxlength="15" />
+
+        <!-- Number: 0–9 button grid -->
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div>
+          <div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div>
+          <div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div>
+          <div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div>
+          <div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div>
+          <div class="num-btn" data-value="9">9</div>
+        </div>
+
+        <!-- Color: button group -->
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+
+        <!-- Size: button group -->
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -56,15 +78,22 @@
       <!-- Row 2 -->
       <div class="trend-row">
         <span class="row-num">2</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312613" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312613" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -74,15 +103,22 @@
       <!-- Row 3 -->
       <div class="trend-row">
         <span class="row-num">3</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312614" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312614" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -92,15 +128,22 @@
       <!-- Row 4 -->
       <div class="trend-row">
         <span class="row-num">4</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312615" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312615" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -110,15 +153,22 @@
       <!-- Row 5 -->
       <div class="trend-row">
         <span class="row-num">5</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312616" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312616" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -128,15 +178,22 @@
       <!-- Row 6 -->
       <div class="trend-row">
         <span class="row-num">6</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312617" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312617" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -146,15 +203,22 @@
       <!-- Row 7 -->
       <div class="trend-row">
         <span class="row-num">7</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312618" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312618" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -164,15 +228,22 @@
       <!-- Row 8 -->
       <div class="trend-row">
         <span class="row-num">8</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312619" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312619" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -182,15 +253,22 @@
       <!-- Row 9 -->
       <div class="trend-row">
         <span class="row-num">9</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312620" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312620" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
@@ -200,15 +278,22 @@
       <!-- Row 10 -->
       <div class="trend-row">
         <span class="row-num">10</span>
-        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312621" maxlength="15" />
-        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
-        <select class="trend-input input-color cell-color">
-          <option value="">Color</option>
-          <option value="Red">Red</option>
-          <option value="Green">Green</option>
-          <option value="Violet">Violet</option>
-        </select>
-        <div class="size-group cell-size">
+        <input type="text" class="trend-input input-id" placeholder="e.g. 504312621" maxlength="15" />
+        <div class="num-group">
+          <input type="hidden" class="num-hidden" value="" />
+          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
+          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
+          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
+          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
+          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
+        </div>
+        <div class="color-group">
+          <input type="hidden" class="color-hidden" value="" />
+          <div class="color-btn red"    data-value="Red">Red</div>
+          <div class="color-btn green"  data-value="Green">Green</div>
+          <div class="color-btn violet" data-value="Violet">Violet</div>
+        </div>
+        <div class="size-group">
           <input type="hidden" class="size-hidden" value="" />
           <div class="size-btn" data-value="Ms">Ms</div>
           <div class="size-btn" data-value="MB">MB</div>
