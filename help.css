@@ -492,3 +492,191 @@ select.trend-input option {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+
+/* ============================================================
+   AUTO-FETCH BAR
+   ============================================================ */
+
+.auto-fetch-bar {
+  max-width: 960px;
+  margin: 0 auto 14px;
+  background: linear-gradient(135deg, #0f1f0f 0%, #1a1a2e 100%);
+  border: 1px solid #22c55e44;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.1);
+}
+
+.auto-fetch-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.auto-fetch-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.auto-fetch-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #86efac;
+  letter-spacing: 0.3px;
+}
+
+.auto-fetch-sub {
+  font-size: 12px;
+  color: #4a9060;
+  margin-top: 2px;
+}
+
+.auto-fetch-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.2s;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.auto-fetch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34,197,94,0.45);
+}
+
+.auto-fetch-btn:active  { transform: translateY(0); }
+.auto-fetch-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.auto-fetch-btn-icon { font-size: 16px; }
+
+/* ============================================================
+   FETCH STATUS BAR
+   ============================================================ */
+
+.fetch-status {
+  max-width: 960px;
+  margin: 0 auto 14px;
+  background: #12121f;
+  border: 1px solid #2d2d4e;
+  border-radius: 12px;
+  padding: 14px 18px;
+  transition: border-color 0.3s;
+}
+
+.fetch-status.success { border-color: #22c55e88; }
+.fetch-status.error   { border-color: #ef444488; }
+
+.fetch-status-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #a0a0c0;
+  margin-bottom: 10px;
+}
+
+/* Pulsing status dot */
+.fetch-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #444;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.fetch-status-dot.idle    { background: #a78bfa; animation: dotPulse 1s infinite; }
+.fetch-status-dot.success { background: #22c55e; animation: none; }
+.fetch-status-dot.error   { background: #ef4444; animation: none; }
+
+@keyframes dotPulse {
+  0%,100% { opacity: 1; transform: scale(1);    }
+  50%      { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* Step lines container */
+.fetch-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2d2d4e transparent;
+}
+
+.fetch-steps::-webkit-scrollbar       { width: 4px; }
+.fetch-steps::-webkit-scrollbar-track { background: transparent; }
+.fetch-steps::-webkit-scrollbar-thumb { background: #2d2d4e; border-radius: 4px; }
+
+.fetch-step-line {
+  font-size: 12px;
+  color: #555;
+  padding: 3px 0;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.25s, transform 0.25s, color 0.3s;
+}
+
+.fetch-step-line.visible {
+  opacity: 1;
+  transform: translateX(0);
+  color: #a78bfa;
+}
+
+/* Last step slightly brighter */
+.fetch-step-line:last-child { color: #c4b5fd; }
+
+/* ============================================================
+   AUTO-FILLED BUTTON PULSE ANIMATION
+   ============================================================ */
+
+@keyframes autofillPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+  70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0);  }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0);   }
+}
+
+.num-btn.auto-filled,
+.color-btn.auto-filled,
+.size-btn.auto-filled {
+  animation: autofillPulse 0.7s ease;
+}
+
+/* ============================================================
+   RESPONSIVE — auto-fetch bar on mobile
+   ============================================================ */
+
+@media (max-width: 600px) {
+  .auto-fetch-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .auto-fetch-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

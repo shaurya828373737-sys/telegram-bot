@@ -17,6 +17,32 @@
   </div>
 
   <!-- ══════════════════════════════════════════════
+       AUTO-FETCH BAR
+  ══════════════════════════════════════════════ -->
+  <div class="auto-fetch-bar">
+    <div class="auto-fetch-left">
+      <div class="auto-fetch-icon">🌐</div>
+      <div>
+        <div class="auto-fetch-title">Auto-Fetch from YaarWin</div>
+        <div class="auto-fetch-sub">Logs in &amp; pulls last 10 WinGo 30s results automatically</div>
+      </div>
+    </div>
+    <button class="auto-fetch-btn" id="autoFetchBtn">
+      <span class="auto-fetch-btn-icon">⚡</span>
+      <span id="autoFetchBtnText">Auto Fill Form</span>
+    </button>
+  </div>
+
+  <!-- ── Fetch Status Bar ── -->
+  <div class="fetch-status" id="fetchStatus" style="display:none;">
+    <div class="fetch-status-inner">
+      <div class="fetch-status-dot" id="fetchStatusDot"></div>
+      <span id="fetchStatusMsg">Connecting…</span>
+    </div>
+    <div class="fetch-steps" id="fetchSteps"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
        MAIN CONTAINER
   ══════════════════════════════════════════════ -->
   <div class="main-container">
@@ -394,6 +420,7 @@
 
   <!-- ── Scripts ── -->
   <script src="Pyton-get-result.js"></script>
+  <script src="auto-fetch.js"></script>
 
 </body>
 </html>
