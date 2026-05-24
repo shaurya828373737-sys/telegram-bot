@@ -4,243 +4,218 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WinGo Prediction Tool</title>
-  <link rel="stylesheet" href="help.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0b16; font-family: 'Segoe UI', Tahoma, sans-serif; }
+
+    /* Full-page iframe */
+    #siteFrame {
+      width: 100%; height: 100%; border: none;
+      display: block; position: fixed;
+      top: 0; left: 0; z-index: 1;
+    }
+
+    /* Floating card */
+    #floatCard {
+      position: fixed;
+      bottom: 24px; right: 20px;
+      z-index: 9999;
+      width: 290px;
+      background: #12122a;
+      border: 1px solid rgba(167,139,250,0.4);
+      border-radius: 18px;
+      box-shadow: 0 8px 40px rgba(109,40,217,0.5), 0 2px 8px rgba(0,0,0,0.7);
+      transition: all 0.3s ease;
+      cursor: default;
+    }
+    #floatCard.minimized {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    #floatCard.minimized .fc-body { display: none; }
+    #floatCard.minimized .fc-icon-min { display: flex; }
+
+    .fc-icon-min {
+      display: none; font-size: 22px;
+      pointer-events: none;
+    }
+
+    /* drag bar */
+    .fc-drag {
+      width: 36px; height: 4px;
+      background: #2d2d5e; border-radius: 2px;
+      margin: 12px auto 10px;
+    }
+
+    .fc-body { padding: 0 16px 14px; }
+
+    /* header */
+    .fc-head {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .fc-badge {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: #a78bfa;
+    }
+    .fc-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #a78bfa; flex-shrink: 0;
+      animation: fcpulse 1.4s infinite;
+    }
+    .fc-dot.green  { background: #22c55e; animation: none; }
+    .fc-dot.yellow { background: #facc15; animation: none; }
+    .fc-dot.red    { background: #ef4444; animation: none; }
+    @keyframes fcpulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.5} }
+
+    .fc-min-btn {
+      background: #1e1e3a; border: none; color: #555;
+      font-size: 14px; width: 24px; height: 24px;
+      border-radius: 6px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fc-min-btn:hover { background: #2d2d5e; color: #a78bfa; }
+
+    .fc-msg {
+      font-size: 14px; font-weight: 700;
+      color: #e0e0f0; line-height: 1.45;
+      margin-bottom: 5px;
+    }
+    .fc-sub {
+      font-size: 11px; color: #55558a; line-height: 1.4;
+    }
+
+    /* Loading dots */
+    .fc-dots span {
+      display: inline-block; width: 6px; height: 6px;
+      background: #a78bfa; border-radius: 50%; margin: 0 2px;
+      animation: dotbounce .8s infinite;
+    }
+    .fc-dots span:nth-child(2) { animation-delay: .15s; }
+    .fc-dots span:nth-child(3) { animation-delay: .3s; }
+    @keyframes dotbounce { 0%,80%,100%{transform:scale(1)} 40%{transform:scale(1.6)} }
+
+    /* Result panel */
+    #fcResult {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #1e1e3a;
+    }
+
+    .r-period {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #0b0b16; border: 1px solid #1e1e3a;
+      border-radius: 8px; padding: 6px 10px; margin-bottom: 10px;
+    }
+    .r-period-lbl { font-size: 9px; color: #44447a; text-transform: uppercase; letter-spacing: .8px; }
+    .r-period-val { font-size: 12px; font-weight: 700; color: #c4b5fd; font-family: monospace; }
+
+    .r-num {
+      font-size: 52px; font-weight: 900; line-height: 1;
+      text-align: center; margin: 4px 0 10px;
+      background: linear-gradient(135deg, #a78bfa, #7c6af7);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .r-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 10px;
+    }
+    .r-cell { text-align: center; }
+    .r-lbl { font-size: 9px; color: #44447a; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+
+    .pill {
+      display: inline-block; padding: 4px 12px;
+      border-radius: 20px; font-size: 12px; font-weight: 700;
+    }
+    .pill.red    { background: #420a0a; color: #fca5a5; border: 1px solid rgba(239,68,68,.28); }
+    .pill.green  { background: #052810; color: #86efac; border: 1px solid rgba(34,197,94,.28); }
+    .pill.violet { background: #1c0640; color: #d8b4fe; border: 1px solid rgba(168,85,247,.28); }
+    .pill.mb     { background: #0a1e3a; color: #93c5fd; border: 1px solid rgba(59,130,246,.28); }
+    .pill.ms     { background: #181c26; color: #d1d5db; border: 1px solid rgba(107,114,128,.28); }
+
+    .r-conf-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px; }
+    .r-conf-lbl { color: #44447a; text-transform: uppercase; letter-spacing: .8px; }
+    .r-conf-pct { color: #a78bfa; font-weight: 700; }
+    .r-conf-track { height: 5px; border-radius: 99px; background: #0b0b16; overflow: hidden; }
+    .r-conf-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#6d28d9,#a78bfa); width: 0; transition: width 1.2s ease; }
+
+    .btn-refetch {
+      width: 100%; padding: 10px; margin-top: 10px;
+      background: linear-gradient(135deg,#6d28d9,#a78bfa);
+      border: none; border-radius: 11px;
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: transform .15s, box-shadow .2s;
+    }
+    .btn-refetch:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(109,40,217,.5); }
+    .btn-refetch:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════
-     SCREEN 1 — LOGIN
-═══════════════════════════════════════ -->
-<div id="s1" class="screen active">
+  <!-- Full website iframe -->
+  <iframe
+    id="siteFrame"
+    src="https://yaarwin.app/#/login"
+    allow="*"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
+    title="YaarWin"
+  ></iframe>
 
-  <div class="topbar">
-    <div class="tb-dots">
-      <div class="tb-dot r"></div>
-      <div class="tb-dot y"></div>
-      <div class="tb-dot g"></div>
-    </div>
-    <div class="tb-url-bar">
-      <span class="tb-lock">🔒</span>
-      <span class="tb-url-text">yaarwin.app/#/login</span>
-    </div>
-  </div>
+  <!-- Floating Prediction Card -->
+  <div id="floatCard">
+    <span class="fc-icon-min">🎯</span>
+    <div class="fc-drag"></div>
+    <div class="fc-body">
 
-  <div class="login-body">
-    <div class="login-card">
-
-      <div class="lc-brand">
-        <span class="lc-logo">🎯</span>
-        <span class="lc-name">YaarWin</span>
-        <div class="lc-sub">WinGo 30s — Prediction Engine</div>
-      </div>
-
-      <div class="lc-badge">
-        <span class="bdot" id="bdot"></span>
-        <span id="btext">Enter your credentials to continue</span>
-      </div>
-
-      <div class="lc-form">
-
-        <div>
-          <label class="f-label">📱 Phone Number</label>
-          <input id="inp-phone" class="f-input" type="text"
-                 placeholder="e.g. 9876543210" autocomplete="off"/>
+      <div class="fc-head">
+        <div class="fc-badge">
+          <div class="fc-dot" id="fcDot"></div>
+          <span id="fcBadgeText">Prediction Tool</span>
         </div>
+        <button class="fc-min-btn" id="fcMinBtn">—</button>
+      </div>
 
-        <div>
-          <label class="f-label">🔑 Password</label>
-          <div class="pw-wrap">
-            <input id="inp-pass" class="f-input" type="password"
-                   placeholder="Enter your password"
-                   style="padding-right:44px"/>
-            <span class="pw-eye" id="pwEye">👁</span>
+      <div class="fc-msg" id="fcMsg">Login Now To Start</div>
+      <div class="fc-sub" id="fcSub">Please log in to yaarwin.app to continue</div>
+
+      <div id="fcResult">
+        <div class="r-period">
+          <span class="r-period-lbl">Next Period ID</span>
+          <span class="r-period-val" id="rPeriod">—</span>
+        </div>
+        <div class="r-num" id="rNum">—</div>
+        <div class="r-grid">
+          <div class="r-cell">
+            <div class="r-lbl">Color</div>
+            <div id="rColor">—</div>
+          </div>
+          <div class="r-cell">
+            <div class="r-lbl">Size</div>
+            <div id="rSize">—</div>
           </div>
         </div>
-
-        <div class="chk-row">
-          <label class="chk-lbl">
-            <input type="checkbox" id="chkSave" checked/>
-            <span>Save credentials for next time</span>
-          </label>
+        <div class="r-conf-row">
+          <span class="r-conf-lbl">Confidence</span>
+          <span class="r-conf-pct" id="rConf">—</span>
         </div>
-
-        <button class="btn-main" id="btnLogin">
-          🚀 Login &amp; Open Website
-        </button>
-
-        <div class="divider"><span>or</span></div>
-
-        <button class="btn-ghost" id="btnSkip">
-          Skip Login — Go to Dashboard Manually
-        </button>
-
-      </div>
-
-      <div class="lc-err" id="lcErr"></div>
-
-    </div>
-  </div>
-
-</div><!-- /s1 -->
-
-
-<!-- ═══════════════════════════════════════
-     SCREEN 2 — WEBSITE PREVIEW (iframe)
-═══════════════════════════════════════ -->
-<div id="s2" class="screen">
-
-  <div class="topbar">
-    <div class="tb-dots">
-      <div class="tb-dot r"></div>
-      <div class="tb-dot y"></div>
-      <div class="tb-dot g"></div>
-    </div>
-    <div class="tb-url-bar">
-      <span class="tb-lock">🔒</span>
-      <span class="tb-url-text" id="s2Url">yaarwin.app/#/login</span>
-    </div>
-    <button class="tb-btn" id="btnS2Back">← Back</button>
-  </div>
-
-  <div class="preview-body">
-    <div class="preview-info-bar">
-      <div class="preview-info-left">
-        <span>📡</span>
-        <span>Logged in as <strong id="previewPhone">—</strong> — Website loading below</span>
-      </div>
-      <button class="btn-goto-dash" id="btnGoDash">
-        📊 Go to Predictions →
-      </button>
-    </div>
-
-    <div class="website-frame-wrap">
-      <iframe
-        id="siteFrame"
-        class="website-frame"
-        src="about:blank"
-        title="YaarWin Website"
-        allow="*"
-        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
-      ></iframe>
-    </div>
-  </div>
-
-</div><!-- /s2 -->
-
-
-<!-- ═══════════════════════════════════════
-     SCREEN 3 — DASHBOARD
-═══════════════════════════════════════ -->
-<div id="s3" class="screen">
-
-  <div class="topbar">
-    <div class="tb-dots">
-      <div class="tb-dot r"></div>
-      <div class="tb-dot y"></div>
-      <div class="tb-dot g"></div>
-    </div>
-    <div class="tb-url-bar">
-      <span class="tb-lock">🔒</span>
-      <span class="tb-url-text">yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&amp;lottery=WinGo</span>
-    </div>
-    <button class="tb-btn" id="btnS3Back">← Login</button>
-  </div>
-
-  <div class="dash-bar">
-    <div class="dash-bar-left">
-      <span class="dash-icon">📊</span>
-      <div>
-        <div class="dash-title">WinGo 30s — Prediction Engine</div>
-        <div class="dash-sub" id="dashSub">Fetching data…</div>
-      </div>
-    </div>
-    <button class="btn-sm" id="btnRefresh">🔄 Refresh</button>
-  </div>
-
-  <!-- Loader -->
-  <div class="loader-wrap" id="loaderWrap">
-    <div class="spin"></div>
-    <div class="loader-list">
-      <div class="loader-item" id="ls1">🔐 Logging in to YaarWin…</div>
-      <div class="loader-item" id="ls2">📡 Requesting WinGo 30s history…</div>
-      <div class="loader-item" id="ls3">📦 Receiving data from server…</div>
-      <div class="loader-item" id="ls4">🔄 Parsing &amp; normalising records…</div>
-      <div class="loader-item" id="ls5">✨ Building prediction…</div>
-    </div>
-  </div>
-
-  <!-- Error bar -->
-  <div class="err-bar" id="errBar"></div>
-
-  <!-- Dashboard content -->
-  <div class="dash-content" id="dashContent">
-
-    <!-- Prediction card -->
-    <div class="pred-card">
-      <div class="pred-card-ttl">🎯 Next Predicted Result</div>
-      <div class="pred-grid">
-        <div class="pc">
-          <div class="pc-lbl">Period ID</div>
-          <div class="pc-val" id="pId">—</div>
+        <div class="r-conf-track">
+          <div class="r-conf-fill" id="rConfBar"></div>
         </div>
-        <div class="pc big">
-          <div class="pc-lbl">Number</div>
-          <div class="pc-val" id="pNum">—</div>
-        </div>
-        <div class="pc">
-          <div class="pc-lbl">Color</div>
-          <div id="pColor">—</div>
-        </div>
-        <div class="pc">
-          <div class="pc-lbl">Size</div>
-          <div id="pSize">—</div>
-        </div>
+        <button class="btn-refetch" id="btnRefetch">🔍 Fetch Next Result</button>
       </div>
-      <div class="conf-row">
-        <span class="conf-lbl">Prediction Confidence</span>
-        <span class="conf-pct" id="confPct">—</span>
-      </div>
-      <div class="conf-track">
-        <div class="conf-fill" id="confFill"></div>
-      </div>
-    </div>
 
-    <!-- Last 10 results -->
-    <div class="hist-sec">
-      <div class="hist-ttl">📋 Last 10 WinGo 30s Results</div>
-      <div class="hist-table">
-        <div class="hist-head">
-          <span>#</span>
-          <span>Period ID</span>
-          <span>Num</span>
-          <span>Color</span>
-          <span>Size</span>
-        </div>
-        <div id="histRows"></div>
-      </div>
-    </div>
-
-    <button class="btn-predict" id="btnPredict">
-      🔍 Fetch Result Next
-    </button>
-
-  </div><!-- /dash-content -->
-
-  <!-- Predict loading overlay -->
-  <div class="overlay" id="overlay">
-    <div class="overlay-box">
-      <div class="ov-spin"></div>
-      <div class="ov-text">
-        Analyzing Python... Kindly wait, all our files are
-        doing their work. To get a best and accurate result.
-      </div>
-      <div class="ov-step" id="ovStep"></div>
     </div>
   </div>
 
-</div><!-- /s3 -->
-
-<script src="Pyton-get-result.js"></script>
-<script src="auto-fetch.js"></script>
+  <script src="auto-fetch.js"></script>
 </body>
 </html>
