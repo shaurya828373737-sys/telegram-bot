@@ -3,342 +3,312 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Number Sum Checker</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
-      min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .container {
-      background: #ffffff;
-      border-radius: 20px;
-      padding: 40px 30px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      width: 100%;
-      max-width: 600px;
-    }
-
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 8px;
-      font-size: 28px;
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #777;
-      margin-bottom: 30px;
-      font-size: 14px;
-    }
-
-    .label {
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 12px;
-      display: block;
-      font-size: 15px;
-    }
-
-    .inputs {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 25px;
-      flex-wrap: wrap;
-    }
-
-    .number-input {
-      width: 70px;
-      height: 70px;
-      text-align: center;
-      font-size: 26px;
-      font-weight: 700;
-      border: 3px solid #667eea;
-      border-radius: 12px;
-      color: #333;
-      background: #f8f9ff;
-      transition: all 0.2s;
-    }
-
-    .number-input:focus {
-      outline: none;
-      border-color: #764ba2;
-      background: #fff;
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(118, 75, 162, 0.3);
-    }
-
-    /* Hide spinner arrows */
-    .number-input::-webkit-outer-spin-button,
-    .number-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    .number-input { -moz-appearance: textfield; }
-
-    .button-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 25px;
-    }
-
-    .calc-btn, .clear-btn {
-      flex: 1;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .calc-btn {
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-    }
-
-    .calc-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4);
-    }
-
-    .clear-btn {
-      background: #f0f0f0;
-      color: #555;
-    }
-
-    .clear-btn:hover {
-      background: #e0e0e0;
-    }
-
-    .sum-box {
-      background: linear-gradient(135deg, #f5f7fa, #e8ecf3);
-      border: 2px dashed #667eea;
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    .sum-label {
-      color: #777;
-      font-size: 14px;
-      margin-bottom: 6px;
-    }
-
-    .sum-value {
-      font-size: 42px;
-      font-weight: 800;
-      color: #764ba2;
-      letter-spacing: 2px;
-    }
-
-    .results-label {
-      text-align: center;
-      color: #555;
-      font-size: 14px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
-    .results {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .result-box {
-      padding: 22px 10px;
-      border-radius: 12px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 700;
-      background: #f0f0f0;
-      color: #999;
-      border: 3px solid transparent;
-      transition: all 0.4s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .result-box.active {
-      background: linear-gradient(135deg, #00c853, #64dd17);
-      color: white;
-      border-color: #1b5e20;
-      box-shadow: 0 0 25px rgba(0, 200, 83, 0.6);
-      transform: scale(1.05);
-    }
-
-    .result-box.active::before {
-      content: '';
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 12px;
-      height: 12px;
-      background: #fff;
-      border-radius: 50%;
-      box-shadow: 0 0 10px #fff;
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .error-msg {
-      color: #d32f2f;
-      text-align: center;
-      font-size: 13px;
-      margin-top: 10px;
-      min-height: 18px;
-    }
-
-    @media (max-width: 480px) {
-      .number-input {
-        width: 55px;
-        height: 55px;
-        font-size: 22px;
-      }
-      .sum-value { font-size: 32px; }
-      h1 { font-size: 22px; }
-    }
-  </style>
+  <title>Trend Prediction Tool</title>
+  <link rel="stylesheet" href="help.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>🔢 Number Sum Checker</h1>
-    <p class="subtitle">Enter 5 numbers and find out the result</p>
 
-    <label class="label">Enter 5 numbers:</label>
-    <div class="inputs">
-      <input type="number" class="number-input" data-index="0" />
-      <input type="number" class="number-input" data-index="1" />
-      <input type="number" class="number-input" data-index="2" />
-      <input type="number" class="number-input" data-index="3" />
-      <input type="number" class="number-input" data-index="4" />
+  <!-- ══════════════════════════════════════════════
+       PAGE HEADER
+  ══════════════════════════════════════════════ -->
+  <div class="page-header">
+    <h1>📊 Trend Prediction Tool</h1>
+    <p>Enter the last 10 trend records — the engine will predict the next outcome.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       MAIN CONTAINER
+  ══════════════════════════════════════════════ -->
+  <div class="main-container">
+
+    <div class="section-title">Historical Trend Data (Last 10)</div>
+
+    <!-- ── Table Header ── -->
+    <div class="trend-table-head">
+      <span>#</span>
+      <span>Trend ID</span>
+      <span>Number (0–9)</span>
+      <span class="col-color">Color</span>
+      <span class="col-size">Size</span>
     </div>
 
-    <div class="button-row">
-      <button class="calc-btn" id="calcBtn">Calculate</button>
-      <button class="clear-btn" id="clearBtn">Clear</button>
-    </div>
+    <!-- ── 10 Trend Rows ── -->
+    <div id="trendRows">
 
-    <div class="error-msg" id="errorMsg"></div>
+      <!-- Row 1 -->
+      <div class="trend-row">
+        <span class="row-num">1</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312612" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
 
-    <div class="sum-box">
-      <div class="sum-label">Sum of all numbers:</div>
-      <div class="sum-value" id="sumValue">--</div>
-    </div>
+      <!-- Row 2 -->
+      <div class="trend-row">
+        <span class="row-num">2</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312613" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
 
-    <p class="results-label">Result (correct ones will glow green ✅):</p>
-    <div class="results">
-      <div class="result-box" id="large">Large</div>
-      <div class="result-box" id="small">Smaller</div>
-      <div class="result-box" id="odd">Odd</div>
-      <div class="result-box" id="even">Even</div>
+      <!-- Row 3 -->
+      <div class="trend-row">
+        <span class="row-num">3</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312614" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="trend-row">
+        <span class="row-num">4</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312615" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 5 -->
+      <div class="trend-row">
+        <span class="row-num">5</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312616" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 6 -->
+      <div class="trend-row">
+        <span class="row-num">6</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312617" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 7 -->
+      <div class="trend-row">
+        <span class="row-num">7</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312618" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 8 -->
+      <div class="trend-row">
+        <span class="row-num">8</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312619" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 9 -->
+      <div class="trend-row">
+        <span class="row-num">9</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312620" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+      <!-- Row 10 -->
+      <div class="trend-row">
+        <span class="row-num">10</span>
+        <input type="text"   class="trend-input input-id"    placeholder="e.g. 504312621" maxlength="15" />
+        <input type="number" class="trend-input input-num"   placeholder="0–9" min="0" max="9" />
+        <select class="trend-input input-color cell-color">
+          <option value="">Color</option>
+          <option value="Red">Red</option>
+          <option value="Green">Green</option>
+          <option value="Violet">Violet</option>
+        </select>
+        <div class="size-group cell-size">
+          <input type="hidden" class="size-hidden" value="" />
+          <div class="size-btn" data-value="Ms">Ms</div>
+          <div class="size-btn" data-value="MB">MB</div>
+        </div>
+      </div>
+
+    </div><!-- /#trendRows -->
+
+    <!-- ── Global Error Bar ── -->
+    <div id="globalError" style="
+      display:none;
+      margin-top:12px;
+      padding:10px 14px;
+      background:#450a0a;
+      border:1px solid #ef4444;
+      border-radius:8px;
+      color:#fca5a5;
+      font-size:13px;
+    "></div>
+
+    <!-- ── Action Button ── -->
+    <button class="fetch-btn" id="fetchBtn">🔍 Fetch Result Next</button>
+
+    <!-- ══════════════════════════════════════════════
+         RESULT PANEL
+    ══════════════════════════════════════════════ -->
+    <div id="resultPanel">
+      <div class="section-title">Predicted Next Trend</div>
+
+      <div class="result-grid">
+
+        <!-- Trend ID -->
+        <div class="result-card highlight">
+          <div class="card-label">Next Trend ID</div>
+          <div class="card-value" id="res-trendId">–</div>
+          <div class="card-sub">Auto-incremented</div>
+        </div>
+
+        <!-- Number -->
+        <div class="result-card highlight">
+          <div class="card-label">Predicted Number</div>
+          <div class="card-value" id="res-number">–</div>
+          <div class="card-sub">0 – 9</div>
+        </div>
+
+        <!-- Color -->
+        <div class="result-card">
+          <div class="card-label">Predicted Color</div>
+          <div id="res-color">–</div>
+        </div>
+
+        <!-- Size -->
+        <div class="result-card">
+          <div class="card-label">Predicted Size</div>
+          <div id="res-size">–</div>
+        </div>
+
+      </div><!-- /.result-grid -->
+
+      <!-- Confidence -->
+      <div style="margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">
+            Prediction Confidence
+          </span>
+          <span style="font-size:14px;font-weight:700;color:#a78bfa;" id="res-conf-pct">–</span>
+        </div>
+        <div class="confidence-wrap">
+          <div class="confidence-bar" id="res-conf-bar"></div>
+        </div>
+      </div>
+
+      <!-- History chips -->
+      <div style="margin-top:20px;">
+        <div style="font-size:12px;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">
+          Input Summary
+        </div>
+        <div class="history-strip" id="historyStrip"></div>
+      </div>
+
+    </div><!-- /#resultPanel -->
+
+  </div><!-- /.main-container -->
+
+  <!-- ══════════════════════════════════════════════
+       LOADING DIALOG OVERLAY
+  ══════════════════════════════════════════════ -->
+  <div id="loadingOverlay">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">
+        Analyzing Python... Kindly wait, all our files are doing their work.
+        To get a best and accurate result.
+      </div>
+      <div class="loading-steps" id="loadingStep"></div>
     </div>
   </div>
 
-  <script>
-    const inputs = document.querySelectorAll('.number-input');
-    const calcBtn = document.getElementById('calcBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const sumValue = document.getElementById('sumValue');
-    const errorMsg = document.getElementById('errorMsg');
+  <!-- ── Scripts ── -->
+  <script src="Pyton-get-result.js"></script>
 
-    const boxes = {
-      large: document.getElementById('large'),
-      small: document.getElementById('small'),
-      odd: document.getElementById('odd'),
-      even: document.getElementById('even'),
-    };
-
-    // Threshold for Large vs Smaller.
-    // Default: based on last digit of sum (0-4 = Smaller, 5-9 = Large)
-    // You can change this logic easily.
-    function isLarge(sum) {
-      return (sum % 10) >= 5;
-    }
-
-    // Auto-jump to next input as user types
-    inputs.forEach((inp, i) => {
-      inp.addEventListener('input', () => {
-        if (inp.value.length >= 1 && i < inputs.length - 1) {
-          inputs[i + 1].focus();
-        }
-      });
-      inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') calculate();
-        if (e.key === 'Backspace' && !inp.value && i > 0) {
-          inputs[i - 1].focus();
-        }
-      });
-    });
-
-    function resetBoxes() {
-      Object.values(boxes).forEach(b => b.classList.remove('active'));
-    }
-
-    function calculate() {
-      errorMsg.textContent = '';
-      resetBoxes();
-
-      const values = [];
-      for (const inp of inputs) {
-        if (inp.value.trim() === '') {
-          errorMsg.textContent = '⚠️ Please fill all 5 boxes';
-          sumValue.textContent = '--';
-          return;
-        }
-        const n = Number(inp.value);
-        if (Number.isNaN(n)) {
-          errorMsg.textContent = '⚠️ Only numbers allowed';
-          sumValue.textContent = '--';
-          return;
-        }
-        values.push(n);
-      }
-
-      const sum = values.reduce((a, b) => a + b, 0);
-      sumValue.textContent = sum;
-
-      // Light up the correct boxes
-      if (isLarge(sum)) boxes.large.classList.add('active');
-      else boxes.small.classList.add('active');
-
-      if (sum % 2 === 0) boxes.even.classList.add('active');
-      else boxes.odd.classList.add('active');
-    }
-
-    function clearAll() {
-      inputs.forEach(i => (i.value = ''));
-      sumValue.textContent = '--';
-      errorMsg.textContent = '';
-      resetBoxes();
-      inputs[0].focus();
-    }
-
-    calcBtn.addEventListener('click', calculate);
-    clearBtn.addEventListener('click', clearAll);
-
-    // Focus first input on load
-    inputs[0].focus();
-  </script>
 </body>
 </html>
