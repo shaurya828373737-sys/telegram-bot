@@ -1,12 +1,19 @@
 /**
- * auto-fetch.js  —  2-screen controller
- * Screen 1: Login  →  Screen 2: Dashboard + Prediction
+ * auto-fetch.js
+ * 3-screen flow:
+ *   S1 Login → S2 Website Preview (iframe) → S3 Dashboard
+ *
+ * Credentials are entered on S1, saved to localStorage,
+ * sent to fetch-data.php via POST so PHP does the real login.
  */
 "use strict";
 
 const FETCH_URL   = "fetch-data.php";
 const PREDICT_URL = "api.php";
 const CRED_KEY    = "yw_creds";
+
+const SITE_LOGIN_URL = "https://yaarwin.app/#/login";
+const SITE_GAME_URL  = "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
 
 const PRED_STEPS = [
   "Initialising Python environment…",
@@ -18,103 +25,157 @@ const PRED_STEPS = [
   "Finalising prediction output…",
 ];
 
+/* stored after login */
+let currentPhone = "";
+let currentPass  = "";
 let cachedTrends = [];
 
-/* ── BOOT ──────────────────────────────────── */
+/* ─── BOOT ──────────────────────────────────────── */
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* restore saved creds */
+  /* Restore saved credentials */
   const saved = loadCreds();
   if (saved) {
     document.getElementById("inp-phone").value = saved.phone;
     document.getElementById("inp-pass").value  = saved.pass;
-    setBadge("loading", "Credentials loaded — click Login");
+    currentPhone = saved.phone;
+    currentPass  = saved.pass;
+    setBadge("ok", "✅ Credentials loaded — click Login");
   }
 
-  /* password eye toggle */
+  /* Password eye toggle */
   document.getElementById("pwEye").addEventListener("click", () => {
     const f = document.getElementById("inp-pass");
-    f.type  = (f.type === "password") ? "text" : "password";
+    f.type  = f.type === "password" ? "text" : "password";
+    document.getElementById("pwEye").textContent = f.type === "password" ? "👁" : "🙈";
   });
 
-  document.getElementById("btnLogin").addEventListener("click",   doLogin);
-  document.getElementById("btnManual").addEventListener("click",  () => goS2(false));
-  document.getElementById("btnBack").addEventListener("click",    goS1);
+  /* S1 buttons */
+  document.getElementById("btnLogin").addEventListener("click", doLogin);
+  document.getElementById("btnSkip").addEventListener("click", () => goS3(false));
+
+  /* S2 buttons */
+  document.getElementById("btnS2Back").addEventListener("click", goS1);
+  document.getElementById("btnGoDash").addEventListener("click", () => goS3(true));
+
+  /* S3 buttons */
+  document.getElementById("btnS3Back").addEventListener("click", goS1);
   document.getElementById("btnRefresh").addEventListener("click", doFetch);
   document.getElementById("btnPredict").addEventListener("click", doPredict);
 });
 
-/* ── SCREEN SWITCH ─────────────────────────── */
-function goS2(fetch) {
-  document.getElementById("s1").classList.remove("active");
-  document.getElementById("s2").classList.add("active");
-  if (fetch) doFetch();
+/* ─── SCREEN HELPERS ───────────────────────────── */
+function showOnly(id) {
+  ["s1","s2","s3"].forEach(s => {
+    const el = document.getElementById(s);
+    if (s === id) el.classList.add("active");
+    else          el.classList.remove("active");
+  });
+  window.scrollTo(0, 0);
 }
-function goS1() {
-  document.getElementById("s2").classList.remove("active");
-  document.getElementById("s1").classList.add("active");
+function goS1() { showOnly("s1"); }
+function goS2() {
+  /* Load website into iframe */
+  const frame = document.getElementById("siteFrame");
+  const urlEl = document.getElementById("s2Url");
+  frame.src = SITE_LOGIN_URL;
+  urlEl.textContent = SITE_LOGIN_URL;
+
+  /* After 1.5 s redirect iframe to game page */
+  setTimeout(() => {
+    frame.src = SITE_GAME_URL;
+    urlEl.textContent = SITE_GAME_URL;
+  }, 1500);
+
+  /* Show logged-in phone */
+  document.getElementById("previewPhone").textContent = currentPhone || "—";
+
+  showOnly("s2");
+}
+function goS3(fetch) {
+  showOnly("s3");
+  if (fetch) doFetch();
+  else {
+    /* Show empty dashboard so user can still use Refresh */
+    document.getElementById("dashSub").textContent = "Manual mode — tap 🔄 Refresh to load data";
+    renderAll([], null, null);
+  }
 }
 
-/* ── LOGIN ─────────────────────────────────── */
+/* ─── LOGIN ─────────────────────────────────────── */
 function doLogin() {
   const phone = document.getElementById("inp-phone").value.trim();
   const pass  = document.getElementById("inp-pass").value.trim();
-  const err   = document.getElementById("lcErr");
+  const errEl = document.getElementById("lcErr");
   const btn   = document.getElementById("btnLogin");
 
-  err.textContent = "";
+  errEl.textContent = "";
 
-  if (!phone || !pass) {
-    err.textContent = "⚠ Please enter phone number and password.";
-    return;
-  }
+  if (!phone) { errEl.textContent = "⚠ Phone number is required."; return; }
+  if (!pass)  { errEl.textContent = "⚠ Password is required."; return; }
 
-  if (document.getElementById("chkRemember").checked) saveCreds(phone, pass);
+  /* Save credentials */
+  currentPhone = phone;
+  currentPass  = pass;
+  if (document.getElementById("chkSave").checked) saveCreds(phone, pass);
 
-  btn.disabled   = true;
-  btn.textContent = "Logging in…";
-  setBadge("loading", "Login triggered — fetching data…");
+  btn.disabled = true;
+  btn.textContent = "Opening website…";
+  setBadge("loading", "Credentials saved — opening website…");
 
   setTimeout(() => {
-    btn.disabled    = false;
-    btn.innerHTML   = "🚀 Login &amp; Fetch Results";
-    goS2(true);
-  }, 400);
+    btn.disabled = false;
+    btn.innerHTML = "🚀 Login &amp; Open Website";
+    setBadge("ok", "✅ Logged in as " + phone);
+    goS2();
+  }, 500);
 }
 
-/* ── FETCH DATA ────────────────────────────── */
+/* ─── FETCH DATA from fetch-data.php ───────────── */
 async function doFetch() {
   showLoader(true);
   hideErr();
-  hideBody();
+  hideContent();
+  resetSteps();
 
-  const steps = ["ls1","ls2","ls3","ls4","ls5"];
+  const stepIds = ["ls1","ls2","ls3","ls4","ls5"];
   let si = 0;
-  stepSet(steps[si++], "on");
+  stepSet(stepIds[si++], "on");
 
   const timer = setInterval(() => {
-    if (si < steps.length) {
-      stepSet(steps[si - 1], "done");
-      stepSet(steps[si++], "on");
+    if (si < stepIds.length) {
+      stepSet(stepIds[si - 1], "done");
+      stepSet(stepIds[si++], "on");
     }
-  }, 700);
+  }, 650);
 
   try {
-    const res  = await fetch(FETCH_URL, { headers: { Accept: "application/json" } });
-    const data = await res.json();
+    /* Send credentials via POST so PHP can do the real login */
+    const body = new URLSearchParams({
+      phone: currentPhone,
+      pass:  currentPass,
+    });
 
+    const res  = await fetch(FETCH_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded",
+                 "Accept": "application/json" },
+      body: body.toString(),
+    });
+
+    const data = await res.json();
     clearInterval(timer);
-    steps.forEach(s => stepSet(s, "done"));
+    stepIds.forEach(s => stepSet(s, "done"));
 
     if (data.status === "error") throw new Error(data.error);
     if (!Array.isArray(data.trends) || !data.trends.length)
-      throw new Error("No trend data returned.");
+      throw new Error("No trend records returned from YaarWin.");
 
     cachedTrends = data.trends;
 
-    /* auto-run prediction */
+    /* Auto-run prediction */
     let pred = null;
-    try { pred = await runPredict(cachedTrends); } catch(e) { /* show data even if pred fails */ }
+    try { pred = await callPredict(cachedTrends); } catch(_) {}
 
     showLoader(false);
     renderAll(cachedTrends, pred, data.fetched_at);
@@ -122,20 +183,21 @@ async function doFetch() {
   } catch (err) {
     clearInterval(timer);
     showLoader(false);
-    showErr("❌ " + err.message + " — You can still enter data manually.");
+    showErr("❌ " + err.message
+      + (currentPhone ? "" : " — Please go back and enter credentials first."));
     renderAll([], null, null);
   }
 }
 
-/* ── PREDICT ───────────────────────────────── */
+/* ─── PREDICT (calls api.php) ───────────────────── */
 async function doPredict() {
   if (cachedTrends.length < 10) {
-    showErr("⚠ Need 10 trend records. Tap Refresh or check credentials in fetch-config.php.");
+    showErr("⚠ Need 10 trend records to predict. Tap 🔄 Refresh first.");
     return;
   }
 
-  const overlay = document.getElementById("predOverlay");
-  const stepEl  = document.getElementById("predStep");
+  const overlay = document.getElementById("overlay");
+  const stepEl  = document.getElementById("ovStep");
   const btn     = document.getElementById("btnPredict");
 
   btn.disabled = true;
@@ -149,7 +211,7 @@ async function doPredict() {
   }, 900);
 
   try {
-    const pred = await runPredict(cachedTrends);
+    const pred = await callPredict(cachedTrends);
     clearInterval(t);
     overlay.classList.remove("on");
     renderPred(pred);
@@ -162,7 +224,7 @@ async function doPredict() {
   }
 }
 
-async function runPredict(trends) {
+async function callPredict(trends) {
   const r = await fetch(PREDICT_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -173,19 +235,21 @@ async function runPredict(trends) {
   return d;
 }
 
-/* ── RENDER ────────────────────────────────── */
+/* ─── RENDER ────────────────────────────────────── */
 function renderAll(trends, pred, fetchedAt) {
-  document.getElementById("dashSub").textContent =
-    fetchedAt ? "Last fetched: " + fetchedAt : "Manual mode";
+  const subEl = document.getElementById("dashSub");
+  subEl.textContent = fetchedAt
+    ? "Last fetched: " + fetchedAt
+    : (currentPhone ? "Logged in as " + currentPhone : "Manual mode");
 
-  /* history rows */
+  /* History rows */
   const wrap = document.getElementById("histRows");
   wrap.innerHTML = "";
 
   if (!trends.length) {
     wrap.innerHTML =
-      '<div style="padding:22px;text-align:center;color:#2a2a4a;font-size:13px;">' +
-      'No data — set credentials in fetch-config.php and tap 🔄 Refresh</div>';
+      '<div style="padding:20px;text-align:center;color:#2a2a4e;font-size:13px;">' +
+      'No data — tap 🔄 Refresh (make sure credentials are set)</div>';
   } else {
     trends.forEach((t, i) => {
       const cl = t.color.toLowerCase();
@@ -194,7 +258,7 @@ function renderAll(trends, pred, fetchedAt) {
       row.className = "hist-row";
       row.innerHTML =
         `<span class="h-idx">${i + 1}</span>` +
-        `<span class="h-period">${t.trendId}</span>` +
+        `<span class="h-pid">${t.trendId}</span>` +
         `<span><span class="nbadge">${t.number}</span></span>` +
         `<span><span class="cpill ${cl}">${t.color}</span></span>` +
         `<span><span class="spill ${sl === "mb" ? "mb" : "ms"}">${t.size}</span></span>`;
@@ -203,7 +267,8 @@ function renderAll(trends, pred, fetchedAt) {
   }
 
   if (pred) renderPred(pred);
-  showBody();
+
+  showContent();
 }
 
 function renderPred(pred) {
@@ -221,26 +286,51 @@ function renderPred(pred) {
   const conf = pred.confidence ?? 0;
   document.getElementById("confPct").textContent = conf + "%";
   requestAnimationFrame(() =>
-    setTimeout(() => { document.getElementById("confFill").style.width = conf + "%"; }, 60)
+    setTimeout(() => {
+      document.getElementById("confFill").style.width = conf + "%";
+    }, 60)
   );
 }
 
-/* ── UI HELPERS ────────────────────────────── */
-function showLoader(v) { document.getElementById("loaderWrap").classList.toggle("on", v); }
-function showBody()    { document.getElementById("dashBody").classList.add("on"); }
-function hideBody()    { document.getElementById("dashBody").classList.remove("on"); }
-function showErr(m)    { const e=document.getElementById("errBar"); e.textContent=m; e.classList.add("on"); }
-function hideErr()     { document.getElementById("errBar").classList.remove("on"); }
-function stepSet(id,s) { const e=document.getElementById(id); if(e){e.className="loader-item "+(s||"");} }
+/* ─── UI HELPERS ────────────────────────────────── */
+function showLoader(v) {
+  document.getElementById("loaderWrap").classList.toggle("on", v);
+}
+function showContent() {
+  document.getElementById("dashContent").classList.add("on");
+}
+function hideContent() {
+  document.getElementById("dashContent").classList.remove("on");
+}
+function showErr(msg) {
+  const el = document.getElementById("errBar");
+  el.textContent = msg;
+  el.classList.add("on");
+}
+function hideErr() {
+  document.getElementById("errBar").classList.remove("on");
+}
+function resetSteps() {
+  ["ls1","ls2","ls3","ls4","ls5"].forEach(id => stepSet(id, ""));
+}
+function stepSet(id, cls) {
+  const el = document.getElementById(id);
+  if (el) el.className = "loader-item" + (cls ? " " + cls : "");
+}
 function setBadge(state, msg) {
-  document.getElementById("bdot").className  = "badge-dot " + state;
+  document.getElementById("bdot").className   = "bdot " + state;
   document.getElementById("btext").textContent = msg;
 }
 
-/* ── CRED STORAGE ──────────────────────────── */
-function saveCreds(p, pw) {
-  try { localStorage.setItem(CRED_KEY, JSON.stringify({phone:p,pass:pw})); } catch(e){}
+/* ─── CREDENTIAL STORAGE ────────────────────────── */
+function saveCreds(phone, pass) {
+  try {
+    localStorage.setItem(CRED_KEY, JSON.stringify({ phone, pass }));
+  } catch(e) {}
 }
 function loadCreds() {
-  try { const d=localStorage.getItem(CRED_KEY); return d?JSON.parse(d):null; } catch(e){return null;}
+  try {
+    const d = localStorage.getItem(CRED_KEY);
+    return d ? JSON.parse(d) : null;
+  } catch(e) { return null; }
 }

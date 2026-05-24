@@ -8,9 +8,9 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════
+<!-- ═══════════════════════════════════════
      SCREEN 1 — LOGIN
-═══════════════════════════════════ -->
+═══════════════════════════════════════ -->
 <div id="s1" class="screen active">
 
   <div class="topbar">
@@ -19,74 +19,74 @@
       <div class="tb-dot y"></div>
       <div class="tb-dot g"></div>
     </div>
-    <div class="tb-url">
-      <span class="tb-url-icon">🔒</span>
+    <div class="tb-url-bar">
+      <span class="tb-lock">🔒</span>
       <span class="tb-url-text">yaarwin.app/#/login</span>
     </div>
   </div>
 
-  <div class="login-bg">
+  <div class="login-body">
     <div class="login-card">
 
       <div class="lc-brand">
         <span class="lc-logo">🎯</span>
         <span class="lc-name">YaarWin</span>
-        <div class="lc-sub">WinGo Prediction Tool</div>
+        <div class="lc-sub">WinGo 30s — Prediction Engine</div>
       </div>
 
       <div class="lc-badge">
-        <span class="badge-dot" id="bdot"></span>
-        <span id="btext">Enter credentials to continue</span>
+        <span class="bdot" id="bdot"></span>
+        <span id="btext">Enter your credentials to continue</span>
       </div>
 
       <div class="lc-form">
 
         <div>
-          <label class="field-label">📱 Phone Number</label>
-          <input id="inp-phone" class="lc-input" type="text"
-                 placeholder="Enter your phone number" autocomplete="off"/>
+          <label class="f-label">📱 Phone Number</label>
+          <input id="inp-phone" class="f-input" type="text"
+                 placeholder="e.g. 9876543210" autocomplete="off"/>
         </div>
 
         <div>
-          <label class="field-label">🔑 Password</label>
-          <div class="pw-row">
-            <input id="inp-pass" class="lc-input" type="password"
-                   placeholder="Enter your password" autocomplete="off"
+          <label class="f-label">🔑 Password</label>
+          <div class="pw-wrap">
+            <input id="inp-pass" class="f-input" type="password"
+                   placeholder="Enter your password"
                    style="padding-right:44px"/>
             <span class="pw-eye" id="pwEye">👁</span>
           </div>
         </div>
 
-        <div class="remember-row">
-          <label class="remember-lbl">
-            <input type="checkbox" id="chkRemember" checked/>
-            <span>Remember credentials for auto-fill</span>
+        <div class="chk-row">
+          <label class="chk-lbl">
+            <input type="checkbox" id="chkSave" checked/>
+            <span>Save credentials for next time</span>
           </label>
         </div>
 
-        <button class="btn-primary" id="btnLogin">
-          🚀 Login &amp; Fetch Results
+        <button class="btn-main" id="btnLogin">
+          🚀 Login &amp; Open Website
         </button>
 
         <div class="divider"><span>or</span></div>
 
-        <button class="btn-secondary" id="btnManual">
-          Continue Manually (enter data yourself)
+        <button class="btn-ghost" id="btnSkip">
+          Skip Login — Go to Dashboard Manually
         </button>
 
       </div>
 
-      <div class="lc-error" id="lcErr"></div>
+      <div class="lc-err" id="lcErr"></div>
 
     </div>
   </div>
 
-</div>
+</div><!-- /s1 -->
 
 
-<!-- ═══════════════════════════════════
-     SCREEN 2 — DASHBOARD
-═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════════
+     SCREEN 2 — WEBSITE PREVIEW (iframe)
+═══════════════════════════════════════ -->
 <div id="s2" class="screen">
 
   <div class="topbar">
@@ -95,11 +95,55 @@
       <div class="tb-dot y"></div>
       <div class="tb-dot g"></div>
     </div>
-    <div class="tb-url">
-      <span class="tb-url-icon">🔒</span>
+    <div class="tb-url-bar">
+      <span class="tb-lock">🔒</span>
+      <span class="tb-url-text" id="s2Url">yaarwin.app/#/login</span>
+    </div>
+    <button class="tb-btn" id="btnS2Back">← Back</button>
+  </div>
+
+  <div class="preview-body">
+    <div class="preview-info-bar">
+      <div class="preview-info-left">
+        <span>📡</span>
+        <span>Logged in as <strong id="previewPhone">—</strong> — Website loading below</span>
+      </div>
+      <button class="btn-goto-dash" id="btnGoDash">
+        📊 Go to Predictions →
+      </button>
+    </div>
+
+    <div class="website-frame-wrap">
+      <iframe
+        id="siteFrame"
+        class="website-frame"
+        src="about:blank"
+        title="YaarWin Website"
+        allow="*"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
+      ></iframe>
+    </div>
+  </div>
+
+</div><!-- /s2 -->
+
+
+<!-- ═══════════════════════════════════════
+     SCREEN 3 — DASHBOARD
+═══════════════════════════════════════ -->
+<div id="s3" class="screen">
+
+  <div class="topbar">
+    <div class="tb-dots">
+      <div class="tb-dot r"></div>
+      <div class="tb-dot y"></div>
+      <div class="tb-dot g"></div>
+    </div>
+    <div class="tb-url-bar">
+      <span class="tb-lock">🔒</span>
       <span class="tb-url-text">yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&amp;lottery=WinGo</span>
     </div>
-    <button class="tb-back" id="btnBack">← Back</button>
+    <button class="tb-btn" id="btnS3Back">← Login</button>
   </div>
 
   <div class="dash-bar">
@@ -107,10 +151,10 @@
       <span class="dash-icon">📊</span>
       <div>
         <div class="dash-title">WinGo 30s — Prediction Engine</div>
-        <div class="dash-sub" id="dashSub">Loading…</div>
+        <div class="dash-sub" id="dashSub">Fetching data…</div>
       </div>
     </div>
-    <button class="btn-refresh" id="btnRefresh">🔄 Refresh</button>
+    <button class="btn-sm" id="btnRefresh">🔄 Refresh</button>
   </div>
 
   <!-- Loader -->
@@ -118,61 +162,57 @@
     <div class="spin"></div>
     <div class="loader-list">
       <div class="loader-item" id="ls1">🔐 Logging in to YaarWin…</div>
-      <div class="loader-item" id="ls2">📡 Requesting WinGo history…</div>
-      <div class="loader-item" id="ls3">📦 Receiving data…</div>
-      <div class="loader-item" id="ls4">🔄 Parsing records…</div>
+      <div class="loader-item" id="ls2">📡 Requesting WinGo 30s history…</div>
+      <div class="loader-item" id="ls3">📦 Receiving data from server…</div>
+      <div class="loader-item" id="ls4">🔄 Parsing &amp; normalising records…</div>
       <div class="loader-item" id="ls5">✨ Building prediction…</div>
     </div>
   </div>
 
-  <!-- Error -->
+  <!-- Error bar -->
   <div class="err-bar" id="errBar"></div>
 
-  <!-- Content -->
-  <div class="dash-body" id="dashBody">
+  <!-- Dashboard content -->
+  <div class="dash-content" id="dashContent">
 
     <!-- Prediction card -->
     <div class="pred-card">
-      <div class="pred-card-title">🎯 Next Predicted Result</div>
-
+      <div class="pred-card-ttl">🎯 Next Predicted Result</div>
       <div class="pred-grid">
-        <div class="pred-cell">
-          <div class="pred-cell-label">Period ID</div>
-          <div class="pred-cell-val" id="pId">—</div>
+        <div class="pc">
+          <div class="pc-lbl">Period ID</div>
+          <div class="pc-val" id="pId">—</div>
         </div>
-        <div class="pred-cell num-big">
-          <div class="pred-cell-label">Number</div>
-          <div class="pred-cell-val" id="pNum">—</div>
+        <div class="pc big">
+          <div class="pc-lbl">Number</div>
+          <div class="pc-val" id="pNum">—</div>
         </div>
-        <div class="pred-cell">
-          <div class="pred-cell-label">Color</div>
+        <div class="pc">
+          <div class="pc-lbl">Color</div>
           <div id="pColor">—</div>
         </div>
-        <div class="pred-cell">
-          <div class="pred-cell-label">Size</div>
+        <div class="pc">
+          <div class="pc-lbl">Size</div>
           <div id="pSize">—</div>
         </div>
       </div>
-
-      <div class="conf-wrap">
-        <div class="conf-row">
-          <span class="conf-label">Prediction Confidence</span>
-          <span class="conf-pct" id="confPct">—</span>
-        </div>
-        <div class="conf-track">
-          <div class="conf-fill" id="confFill"></div>
-        </div>
+      <div class="conf-row">
+        <span class="conf-lbl">Prediction Confidence</span>
+        <span class="conf-pct" id="confPct">—</span>
+      </div>
+      <div class="conf-track">
+        <div class="conf-fill" id="confFill"></div>
       </div>
     </div>
 
-    <!-- History table -->
-    <div class="hist-section">
-      <div class="hist-title">📋 Last 10 WinGo Results</div>
+    <!-- Last 10 results -->
+    <div class="hist-sec">
+      <div class="hist-ttl">📋 Last 10 WinGo 30s Results</div>
       <div class="hist-table">
         <div class="hist-head">
           <span>#</span>
           <span>Period ID</span>
-          <span>Number</span>
+          <span>Num</span>
           <span>Color</span>
           <span>Size</span>
         </div>
@@ -184,21 +224,21 @@
       🔍 Fetch Result Next
     </button>
 
-    <!-- Overlay -->
-    <div class="pred-overlay" id="predOverlay">
-      <div class="pred-overlay-box">
-        <div class="pred-overlay-spinner"></div>
-        <div class="pred-overlay-text">
-          Analyzing Python... Kindly wait, all our files are
-          doing their work. To get a best and accurate result.
-        </div>
-        <div class="pred-overlay-step" id="predStep"></div>
-      </div>
-    </div>
+  </div><!-- /dash-content -->
 
+  <!-- Predict loading overlay -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-box">
+      <div class="ov-spin"></div>
+      <div class="ov-text">
+        Analyzing Python... Kindly wait, all our files are
+        doing their work. To get a best and accurate result.
+      </div>
+      <div class="ov-step" id="ovStep"></div>
+    </div>
   </div>
 
-</div>
+</div><!-- /s3 -->
 
 <script src="Pyton-get-result.js"></script>
 <script src="auto-fetch.js"></script>
