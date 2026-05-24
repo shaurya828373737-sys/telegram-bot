@@ -1,426 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trend Prediction Tool</title>
-  <link rel="stylesheet" href="help.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WinGo Prediction Tool</title>
+  <link rel="stylesheet" href="help.css"/>
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════════
-       PAGE HEADER
-  ══════════════════════════════════════════════ -->
-  <div class="page-header">
-    <h1>📊 Trend Prediction Tool</h1>
-    <p>Enter the last 10 trend records — the engine will predict the next outcome.</p>
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 — LOGIN
+═══════════════════════════════════════════ -->
+<div id="screen1" class="screen active">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-dot red"></div>
+    <div class="topbar-dot yellow"></div>
+    <div class="topbar-dot green"></div>
+    <div class="topbar-url">
+      <span class="url-lock">🔒</span>
+      <span class="url-text">yaarwin.app/#/login</span>
+    </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════
-       AUTO-FETCH BAR
-  ══════════════════════════════════════════════ -->
-  <div class="auto-fetch-bar">
-    <div class="auto-fetch-left">
-      <div class="auto-fetch-icon">🌐</div>
+  <!-- Login card -->
+  <div class="login-wrap">
+    <div class="login-card">
+
+      <!-- Brand -->
+      <div class="login-brand">
+        <div class="login-logo">🎯</div>
+        <div class="login-brand-name">YaarWin</div>
+        <div class="login-brand-sub">WinGo Prediction Tool</div>
+      </div>
+
+      <!-- Status badge -->
+      <div class="login-status-badge" id="loginBadge">
+        <span class="badge-dot" id="badgeDot"></span>
+        <span id="badgeText">Enter credentials to continue</span>
+      </div>
+
+      <!-- Form -->
+      <div class="login-form">
+        <div class="login-field">
+          <label>📱 Phone Number</label>
+          <input type="text" id="loginPhone" class="login-input" placeholder="Enter your phone number" autocomplete="off"/>
+        </div>
+        <div class="login-field">
+          <label>🔑 Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="loginPass" class="login-input" placeholder="Enter your password" autocomplete="off"/>
+            <span class="pw-toggle" id="pwToggle">👁</span>
+          </div>
+        </div>
+
+        <!-- Auto-fill option -->
+        <div class="autofill-row" id="autofillRow">
+          <label class="autofill-check">
+            <input type="checkbox" id="rememberCreds" checked/>
+            <span>Remember credentials for auto-fill</span>
+          </label>
+        </div>
+
+        <!-- Buttons -->
+        <button class="btn-login" id="btnLogin">
+          <span id="loginBtnText">🚀 Login &amp; Fetch Results</span>
+        </button>
+
+        <div class="login-divider"><span>or</span></div>
+
+        <button class="btn-manual" id="btnManual">
+          Continue Manually (enter data yourself)
+        </button>
+      </div>
+
+      <!-- Error msg -->
+      <div class="login-error" id="loginError"></div>
+
+    </div>
+  </div>
+
+</div><!-- /#screen1 -->
+
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 — RESULTS DASHBOARD
+═══════════════════════════════════════════ -->
+<div id="screen2" class="screen">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-dot red"></div>
+    <div class="topbar-dot yellow"></div>
+    <div class="topbar-dot green"></div>
+    <div class="topbar-url">
+      <span class="url-lock">🔒</span>
+      <span class="url-text">yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S</span>
+    </div>
+    <button class="topbar-back" id="btnBack">← Back</button>
+  </div>
+
+  <!-- Dashboard header -->
+  <div class="dash-header">
+    <div class="dash-title">
+      <span class="dash-icon">📊</span>
       <div>
-        <div class="auto-fetch-title">Auto-Fetch from YaarWin</div>
-        <div class="auto-fetch-sub">Logs in &amp; pulls last 10 WinGo 30s results automatically</div>
+        <div class="dash-name">WinGo 30s — Prediction Engine</div>
+        <div class="dash-sub" id="dashSub">Last fetched: —</div>
       </div>
     </div>
-    <button class="auto-fetch-btn" id="autoFetchBtn">
-      <span class="auto-fetch-btn-icon">⚡</span>
-      <span id="autoFetchBtnText">Auto Fill Form</span>
-    </button>
+    <button class="btn-refresh" id="btnRefresh">🔄 Refresh</button>
   </div>
 
-  <!-- ── Fetch Status Bar ── -->
-  <div class="fetch-status" id="fetchStatus" style="display:none;">
-    <div class="fetch-status-inner">
-      <div class="fetch-status-dot" id="fetchStatusDot"></div>
-      <span id="fetchStatusMsg">Connecting…</span>
+  <!-- Loading state (shown while fetching) -->
+  <div class="fetch-loader" id="fetchLoader">
+    <div class="loader-spinner"></div>
+    <div class="loader-steps" id="loaderSteps">
+      <div class="loader-step" id="lstep1">🔐 Logging in to YaarWin…</div>
+      <div class="loader-step" id="lstep2">📡 Requesting WinGo history…</div>
+      <div class="loader-step" id="lstep3">📦 Receiving data…</div>
+      <div class="loader-step" id="lstep4">🔄 Parsing records…</div>
+      <div class="loader-step" id="lstep5">✨ Building prediction…</div>
     </div>
-    <div class="fetch-steps" id="fetchSteps"></div>
   </div>
 
-  <!-- ══════════════════════════════════════════════
-       MAIN CONTAINER
-  ══════════════════════════════════════════════ -->
-  <div class="main-container">
+  <!-- Error state -->
+  <div class="dash-error" id="dashError"></div>
 
-    <div class="section-title">Historical Trend Data (Last 10)</div>
+  <!-- Content (shown after data loads) -->
+  <div class="dash-content" id="dashContent">
 
-    <!-- ── Table Header ── -->
-    <div class="trend-table-head">
-      <span>#</span>
-      <span>Trend ID</span>
-      <span>Number (0–9)</span>
-      <span>Color</span>
-      <span>Size</span>
-    </div>
-
-    <!-- ── 10 Trend Rows ── -->
-    <div id="trendRows">
-
-      <!-- Row template (×10) — each row identical except placeholder IDs -->
-
-      <!-- Row 1 -->
-      <div class="trend-row">
-        <span class="row-num">1</span>
-
-        <!-- Trend ID -->
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312612" maxlength="15" />
-
-        <!-- Number: 0–9 button grid -->
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div>
-          <div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div>
-          <div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div>
-          <div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div>
-          <div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div>
-          <div class="num-btn" data-value="9">9</div>
+    <!-- ── PREDICTION BOX ── -->
+    <div class="pred-box">
+      <div class="pred-box-title">🎯 NEXT PREDICTED RESULT</div>
+      <div class="pred-main">
+        <div class="pred-item">
+          <div class="pred-label">Period ID</div>
+          <div class="pred-value" id="predId">—</div>
         </div>
-
-        <!-- Color: button group -->
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
+        <div class="pred-item big">
+          <div class="pred-label">Number</div>
+          <div class="pred-num" id="predNum">—</div>
         </div>
-
-        <!-- Size: button group -->
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
+        <div class="pred-item">
+          <div class="pred-label">Color</div>
+          <div id="predColor">—</div>
+        </div>
+        <div class="pred-item">
+          <div class="pred-label">Size</div>
+          <div id="predSize">—</div>
         </div>
       </div>
-
-      <!-- Row 2 -->
-      <div class="trend-row">
-        <span class="row-num">2</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312613" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 3 -->
-      <div class="trend-row">
-        <span class="row-num">3</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312614" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 4 -->
-      <div class="trend-row">
-        <span class="row-num">4</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312615" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 5 -->
-      <div class="trend-row">
-        <span class="row-num">5</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312616" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 6 -->
-      <div class="trend-row">
-        <span class="row-num">6</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312617" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 7 -->
-      <div class="trend-row">
-        <span class="row-num">7</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312618" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 8 -->
-      <div class="trend-row">
-        <span class="row-num">8</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312619" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 9 -->
-      <div class="trend-row">
-        <span class="row-num">9</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312620" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-      <!-- Row 10 -->
-      <div class="trend-row">
-        <span class="row-num">10</span>
-        <input type="text" class="trend-input input-id" placeholder="e.g. 504312621" maxlength="15" />
-        <div class="num-group">
-          <input type="hidden" class="num-hidden" value="" />
-          <div class="num-btn" data-value="0">0</div><div class="num-btn" data-value="1">1</div>
-          <div class="num-btn" data-value="2">2</div><div class="num-btn" data-value="3">3</div>
-          <div class="num-btn" data-value="4">4</div><div class="num-btn" data-value="5">5</div>
-          <div class="num-btn" data-value="6">6</div><div class="num-btn" data-value="7">7</div>
-          <div class="num-btn" data-value="8">8</div><div class="num-btn" data-value="9">9</div>
-        </div>
-        <div class="color-group">
-          <input type="hidden" class="color-hidden" value="" />
-          <div class="color-btn red"    data-value="Red">Red</div>
-          <div class="color-btn green"  data-value="Green">Green</div>
-          <div class="color-btn violet" data-value="Violet">Violet</div>
-        </div>
-        <div class="size-group">
-          <input type="hidden" class="size-hidden" value="" />
-          <div class="size-btn" data-value="Ms">Ms</div>
-          <div class="size-btn" data-value="MB">MB</div>
-        </div>
-      </div>
-
-    </div><!-- /#trendRows -->
-
-    <!-- ── Global Error Bar ── -->
-    <div id="globalError" style="
-      display:none;
-      margin-top:12px;
-      padding:10px 14px;
-      background:#450a0a;
-      border:1px solid #ef4444;
-      border-radius:8px;
-      color:#fca5a5;
-      font-size:13px;
-    "></div>
-
-    <!-- ── Action Button ── -->
-    <button class="fetch-btn" id="fetchBtn">🔍 Fetch Result Next</button>
-
-    <!-- ══════════════════════════════════════════════
-         RESULT PANEL
-    ══════════════════════════════════════════════ -->
-    <div id="resultPanel">
-      <div class="section-title">Predicted Next Trend</div>
-
-      <div class="result-grid">
-
-        <!-- Trend ID -->
-        <div class="result-card highlight">
-          <div class="card-label">Next Trend ID</div>
-          <div class="card-value" id="res-trendId">–</div>
-          <div class="card-sub">Auto-incremented</div>
-        </div>
-
-        <!-- Number -->
-        <div class="result-card highlight">
-          <div class="card-label">Predicted Number</div>
-          <div class="card-value" id="res-number">–</div>
-          <div class="card-sub">0 – 9</div>
-        </div>
-
-        <!-- Color -->
-        <div class="result-card">
-          <div class="card-label">Predicted Color</div>
-          <div id="res-color">–</div>
-        </div>
-
-        <!-- Size -->
-        <div class="result-card">
-          <div class="card-label">Predicted Size</div>
-          <div id="res-size">–</div>
-        </div>
-
-      </div><!-- /.result-grid -->
 
       <!-- Confidence -->
-      <div style="margin-top:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">
-            Prediction Confidence
-          </span>
-          <span style="font-size:14px;font-weight:700;color:#a78bfa;" id="res-conf-pct">–</span>
-        </div>
-        <div class="confidence-wrap">
-          <div class="confidence-bar" id="res-conf-bar"></div>
-        </div>
+      <div class="conf-row">
+        <span class="conf-label">Confidence</span>
+        <span class="conf-pct" id="confPct">—</span>
       </div>
-
-      <!-- History chips -->
-      <div style="margin-top:20px;">
-        <div style="font-size:12px;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">
-          Input Summary
-        </div>
-        <div class="history-strip" id="historyStrip"></div>
+      <div class="conf-track">
+        <div class="conf-fill" id="confFill"></div>
       </div>
-
-    </div><!-- /#resultPanel -->
-
-  </div><!-- /.main-container -->
-
-  <!-- ══════════════════════════════════════════════
-       LOADING DIALOG OVERLAY
-  ══════════════════════════════════════════════ -->
-  <div id="loadingOverlay">
-    <div class="loading-box">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">
-        Analyzing Python... Kindly wait, all our files are doing their work.
-        To get a best and accurate result.
-      </div>
-      <div class="loading-steps" id="loadingStep"></div>
     </div>
-  </div>
 
-  <!-- ── Scripts ── -->
-  <script src="Pyton-get-result.js"></script>
-  <script src="auto-fetch.js"></script>
+    <!-- ── LAST 10 TREND RECORDS ── -->
+    <div class="history-section">
+      <div class="history-title">📋 Last 10 WinGo Results</div>
 
+      <!-- Table header -->
+      <div class="hist-head">
+        <span>#</span>
+        <span>Period ID</span>
+        <span>Number</span>
+        <span>Color</span>
+        <span>Size</span>
+      </div>
+
+      <!-- Rows injected by JS -->
+      <div id="historyRows"></div>
+    </div>
+
+    <!-- ── Fetch Result Button ── -->
+    <button class="btn-predict" id="btnPredict">
+      🔍 Fetch Result Next
+    </button>
+
+    <!-- Predict loading overlay -->
+    <div id="predictOverlay" class="predict-overlay">
+      <div class="predict-box">
+        <div class="predict-spinner"></div>
+        <div class="predict-text">
+          Analyzing Python... Kindly wait, all our files are doing their work.
+          To get a best and accurate result.
+        </div>
+        <div class="predict-step" id="predictStep"></div>
+      </div>
+    </div>
+
+  </div><!-- /#dashContent -->
+
+</div><!-- /#screen2 -->
+
+
+<script src="Pyton-get-result.js"></script>
+<script src="auto-fetch.js"></script>
 </body>
 </html>
