@@ -40,8 +40,7 @@ if ($pass  === '') $pass  = YW_PASSWORD;
 if ($phone === '' || $pass === '' ||
     $phone === 'YOUR_PHONE_NUMBER' || $pass === 'YOUR_PASSWORD') {
   jsonError(
-    'No credentials. Open the tool, tap 📱 Login, ' .
-    'log in on the website, then edit fetch-config.php with your phone & password.', 401
+    'No credentials saved. Please enter your YaarWin phone & password in the floating card first.', 401
   );
 }
 
@@ -49,7 +48,7 @@ if ($phone === '' || $pass === '' ||
 $token = attemptLogin($phone, $pass);
 if (!$token) {
   jsonError(
-    'Login failed on all endpoints. Check credentials or try again later.', 401
+    'Login failed — wrong phone/password or YaarWin API changed. Please check credentials in the card.', 401
   );
 }
 
@@ -72,6 +71,7 @@ jsonSuccess([
   'game'       => 'WinGo_30S',
   'source'     => 'yaarwin.app',
   'fetched_at' => date('Y-m-d H:i:s'),
+  'phone_used' => substr($phone, 0, 4) . '****',  // masked for safety
 ]);
 
 /* ════════════════════════════════════════════════════════

@@ -102,6 +102,34 @@
       font-size: 11px; color: #4a4a7a; line-height: 1.4;
     }
 
+    /* ── CREDENTIAL FORM (inside card) ── */
+    #credForm {
+      display: none;
+      margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid #1e1e38;
+    }
+    #credForm .cf-label {
+      font-size: 10px; color: #4a4a7a;
+      text-transform: uppercase; letter-spacing: .8px;
+      display: block; margin-bottom: 5px;
+    }
+    #credForm input {
+      width: 100%; padding: 9px 12px;
+      background: #080818; border: 1px solid #2a2a4a;
+      border-radius: 9px; color: #e0e0f0; font-size: 13px;
+      outline: none; margin-bottom: 8px;
+      transition: border-color .2s;
+    }
+    #credForm input:focus { border-color: #8b5cf6; }
+    #credForm input::placeholder { color: #2a2a4a; }
+    .btn-save-creds {
+      width: 100%; padding: 10px;
+      background: linear-gradient(135deg, #6d28d9, #a78bfa);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+
     /* loading dots */
     .ldots span {
       display: inline-block; width: 6px; height: 6px;
@@ -278,6 +306,17 @@
     <!-- message -->
     <div class="c-msg" id="cMsg">Login Now To Start</div>
     <div class="c-sub" id="cSub">Please log in to yaarwin.app to continue</div>
+
+    <!-- Credential entry form (shown if no creds saved) -->
+    <div id="credForm">
+      <label class="cf-label">📱 Your Phone Number</label>
+      <input type="tel" id="cfPhone" placeholder="e.g. 9876543210" autocomplete="off"/>
+      <label class="cf-label">🔑 Password</label>
+      <input type="password" id="cfPass" placeholder="Your YaarWin password"/>
+      <button class="btn-save-creds" onclick="onSaveCreds(); return false;">
+        💾 Save &amp; Connect
+      </button>
+    </div>
 
     <!-- 3 nav buttons — onclick directly, no external JS dependency -->
     <div id="navRow">
@@ -467,10 +506,15 @@ async function runFetch() {
 
   } catch (err) {
     setState("error");
-    document.getElementById("cMsg").innerHTML = "⚠ " + String(err.message).substring(0, 120);
-    document.getElementById("cSub").textContent = "Tap 🔍 Fetch Next Result to retry";
+    var errMsg = String(err.message).substring(0, 160);
+    document.getElementById("cMsg").innerHTML = "⚠ " + errMsg;
+    document.getElementById("cSub").textContent = "Check credentials below and try again";
     document.getElementById("resultPanel").style.display = "none";
     document.getElementById("last10Wrap").style.display  = "none";
+    /* Show the credential form again so user can fix */
+    document.getElementById("credForm").style.display = "block";
+    document.getElementById("cfPhone").value = "";
+    document.getElementById("cfPass").value  = "";
   } finally {
     isBusy = false;
     btn.disabled = false;
@@ -543,6 +587,30 @@ function loadCreds() {
 }
 function saveCreds(p, pw) {
   try { localStorage.setItem(CRED_KEY, JSON.stringify({phone:p,pass:pw})); } catch(_) {}
+}
+
+/* Show credential form if not saved yet */
+(function() {
+  var c = loadCreds();
+  if (!c || !c.phone || !c.pass) {
+    document.getElementById("credForm").style.display = "block";
+    document.getElementById("cMsg").innerHTML = "🔑 Enter Credentials";
+    document.getElementById("cSub").textContent = "Save your YaarWin login to start";
+  }
+})();
+
+function onSaveCreds() {
+  var p  = document.getElementById("cfPhone").value.trim();
+  var pw = document.getElementById("cfPass").value.trim();
+  if (!p || !pw) {
+    document.getElementById("cfPhone").style.borderColor = "#ef4444";
+    return;
+  }
+  saveCreds(p, pw);
+  document.getElementById("credForm").style.display = "none";
+  document.getElementById("cfPhone").style.borderColor = "";
+  setState("login");
+  alert("✅ Credentials saved! Now log in on the website, then tap 🏠 Home → 🎮 WinGo.");
 }
 </script>
 </body>
