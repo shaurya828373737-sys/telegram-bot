@@ -5,224 +5,322 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WinGo Prediction Tool</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0b16; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden;
+                 font-family: 'Segoe UI', Tahoma, sans-serif; background: #0a0a14; }
 
-    /* Full-page iframe */
+    /* ── FULL-PAGE IFRAME ── */
     #siteFrame {
-      width: 100%; height: 100%; border: none;
-      display: block; position: fixed;
-      top: 0; left: 0; z-index: 1;
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      border: none; z-index: 1;
     }
 
-    /* Floating card */
-    #floatCard {
+    /* ════════════════════════════════════════
+       FLOATING CARD
+    ════════════════════════════════════════ */
+    #card {
       position: fixed;
-      bottom: 24px; right: 20px;
+      bottom: 20px; right: 16px;
+      width: 300px;
+      background: #0f0f26;
+      border: 1px solid rgba(139,92,246,.45);
+      border-radius: 20px;
+      box-shadow: 0 8px 48px rgba(109,40,217,.55), 0 2px 12px rgba(0,0,0,.8);
       z-index: 9999;
-      width: 290px;
-      background: #12122a;
-      border: 1px solid rgba(167,139,250,0.4);
-      border-radius: 18px;
-      box-shadow: 0 8px 40px rgba(109,40,217,0.5), 0 2px 8px rgba(0,0,0,0.7);
-      transition: all 0.3s ease;
-      cursor: default;
-    }
-    #floatCard.minimized {
-      width: 54px; height: 54px;
-      border-radius: 50%;
-      padding: 0;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
+      transition: width .3s ease, height .3s ease, border-radius .3s ease;
       overflow: hidden;
-    }
-    #floatCard.minimized .fc-body { display: none; }
-    #floatCard.minimized .fc-icon-min { display: flex; }
-
-    .fc-icon-min {
-      display: none; font-size: 22px;
-      pointer-events: none;
+      user-select: none;
     }
 
-    /* drag bar */
-    .fc-drag {
-      width: 36px; height: 4px;
-      background: #2d2d5e; border-radius: 2px;
+    /* minimised bubble */
+    #card.mini {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #card.mini #cardInner { display: none; }
+    #card.mini #miniIcon  { display: flex; }
+
+    #miniIcon {
+      display: none;
+      width: 56px; height: 56px;
+      align-items: center; justify-content: center;
+      font-size: 24px; pointer-events: none;
+    }
+
+    /* ── DRAG HANDLE ── */
+    #cardInner { padding: 0 16px 14px; }
+    .drag-bar {
+      width: 40px; height: 4px;
+      background: #2a2a50; border-radius: 2px;
       margin: 12px auto 10px;
     }
 
-    .fc-body { padding: 0 16px 14px; }
-
-    /* header */
-    .fc-head {
+    /* ── HEADER ROW ── */
+    .c-head {
       display: flex; align-items: center;
       justify-content: space-between; margin-bottom: 10px;
     }
-    .fc-badge {
+    .c-badge {
       display: flex; align-items: center; gap: 7px;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 1.2px;
-      color: #a78bfa;
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.4px;
+      color: #8b5cf6;
     }
-    .fc-dot {
+    .cdot {
       width: 8px; height: 8px; border-radius: 50%;
-      background: #a78bfa; flex-shrink: 0;
-      animation: fcpulse 1.4s infinite;
+      background: #8b5cf6; flex-shrink: 0;
+      animation: cpulse 1.5s infinite;
     }
-    .fc-dot.green  { background: #22c55e; animation: none; }
-    .fc-dot.yellow { background: #facc15; animation: none; }
-    .fc-dot.red    { background: #ef4444; animation: none; }
-    @keyframes fcpulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.5} }
+    .cdot.g { background: #22c55e; animation: none; }
+    .cdot.y { background: #facc15; animation: none; }
+    .cdot.r { background: #ef4444; animation: none; }
+    @keyframes cpulse {
+      0%,100%{ transform:scale(1);   opacity:1; }
+      50%    { transform:scale(1.55);opacity:.4; }
+    }
 
-    .fc-min-btn {
-      background: #1e1e3a; border: none; color: #555;
-      font-size: 14px; width: 24px; height: 24px;
-      border-radius: 6px; cursor: pointer; flex-shrink: 0;
+    .c-min {
+      background: #1a1a38; border: none; color: #44447a;
+      font-size: 18px; width: 26px; height: 26px;
+      border-radius: 6px; cursor: pointer; line-height: 1;
       display: flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s;
     }
-    .fc-min-btn:hover { background: #2d2d5e; color: #a78bfa; }
+    .c-min:hover { background: #2a2a50; color: #8b5cf6; }
 
-    .fc-msg {
-      font-size: 14px; font-weight: 700;
-      color: #e0e0f0; line-height: 1.45;
-      margin-bottom: 5px;
+    /* ── MESSAGE ── */
+    .c-msg {
+      font-size: 15px; font-weight: 700;
+      color: #e8e8ff; line-height: 1.4; margin-bottom: 4px;
     }
-    .fc-sub {
-      font-size: 11px; color: #55558a; line-height: 1.4;
+    .c-sub {
+      font-size: 11px; color: #4a4a7a; line-height: 1.4;
     }
 
-    /* Loading dots */
-    .fc-dots span {
+    /* loading dots */
+    .ldots span {
       display: inline-block; width: 6px; height: 6px;
-      background: #a78bfa; border-radius: 50%; margin: 0 2px;
-      animation: dotbounce .8s infinite;
+      background: #8b5cf6; border-radius: 50%; margin: 0 2px;
+      animation: ldb .75s infinite;
     }
-    .fc-dots span:nth-child(2) { animation-delay: .15s; }
-    .fc-dots span:nth-child(3) { animation-delay: .3s; }
-    @keyframes dotbounce { 0%,80%,100%{transform:scale(1)} 40%{transform:scale(1.6)} }
+    .ldots span:nth-child(2) { animation-delay: .14s; }
+    .ldots span:nth-child(3) { animation-delay: .28s; }
+    @keyframes ldb { 0%,80%,100%{transform:scale(1)} 40%{transform:scale(1.7)} }
 
-    /* Result panel */
-    #fcResult {
+    /* ── 3 NAV BUTTONS ── */
+    #navRow {
+      display: flex; gap: 6px; margin-top: 11px;
+    }
+    .nav-btn {
+      flex: 1; padding: 8px 4px;
+      font-size: 11px; font-weight: 700;
+      border-radius: 9px; border: 1px solid #1e1e40;
+      background: #14143a; cursor: pointer;
+      transition: background .2s, border-color .2s, transform .1s;
+      white-space: nowrap; text-align: center;
+    }
+    .nav-btn:hover    { background: #1e1e50; transform: translateY(-1px); }
+    .nav-btn:active   { transform: translateY(0); }
+    #nb-login  { color: #818cf8; }
+    #nb-home   { color: #34d399; }
+    #nb-wingo  { color: #facc15; border-color: #2a2a10; background: #1a1a0a; }
+    #nb-wingo:hover { background: #2a2a10; }
+
+    /* ── RESULT PANEL ── */
+    #resultPanel {
       display: none;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #1e1e3a;
+      margin-top: 13px; padding-top: 12px;
+      border-top: 1px solid #1e1e38;
+      animation: fadeUp .4s ease;
     }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-    .r-period {
+    /* period id */
+    .res-pid {
       display: flex; justify-content: space-between; align-items: center;
-      background: #0b0b16; border: 1px solid #1e1e3a;
-      border-radius: 8px; padding: 6px 10px; margin-bottom: 10px;
+      background: #0a0a1c; border: 1px solid #1e1e38;
+      border-radius: 9px; padding: 6px 11px; margin-bottom: 10px;
     }
-    .r-period-lbl { font-size: 9px; color: #44447a; text-transform: uppercase; letter-spacing: .8px; }
-    .r-period-val { font-size: 12px; font-weight: 700; color: #c4b5fd; font-family: monospace; }
+    .res-pid-lbl { font-size: 9px; color: #3a3a5a; text-transform: uppercase; letter-spacing: .9px; }
+    .res-pid-val { font-size: 12px; font-weight: 700; color: #c4b5fd; font-family: monospace; }
 
-    .r-num {
-      font-size: 52px; font-weight: 900; line-height: 1;
-      text-align: center; margin: 4px 0 10px;
-      background: linear-gradient(135deg, #a78bfa, #7c6af7);
+    /* big number */
+    .res-num {
+      font-size: 58px; font-weight: 900; line-height: 1;
+      text-align: center; margin: 4px 0 12px;
+      background: linear-gradient(135deg, #a78bfa, #6d28d9);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .r-grid {
+    /* color + size grid */
+    .res-grid {
       display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; margin-bottom: 10px;
+      gap: 8px; margin-bottom: 11px;
     }
-    .r-cell { text-align: center; }
-    .r-lbl { font-size: 9px; color: #44447a; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+    .res-cell { text-align: center; }
+    .res-lbl  {
+      font-size: 9px; color: #3a3a5a;
+      text-transform: uppercase; letter-spacing: .9px; margin-bottom: 5px;
+    }
 
+    /* pills */
     .pill {
-      display: inline-block; padding: 4px 12px;
+      display: inline-block; padding: 5px 14px;
       border-radius: 20px; font-size: 12px; font-weight: 700;
     }
-    .pill.red    { background: #420a0a; color: #fca5a5; border: 1px solid rgba(239,68,68,.28); }
-    .pill.green  { background: #052810; color: #86efac; border: 1px solid rgba(34,197,94,.28); }
-    .pill.violet { background: #1c0640; color: #d8b4fe; border: 1px solid rgba(168,85,247,.28); }
-    .pill.mb     { background: #0a1e3a; color: #93c5fd; border: 1px solid rgba(59,130,246,.28); }
-    .pill.ms     { background: #181c26; color: #d1d5db; border: 1px solid rgba(107,114,128,.28); }
+    .pill.red    { background:#3d0808; color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+    .pill.green  { background:#042810; color:#86efac; border:1px solid rgba(34,197,94,.3); }
+    .pill.violet { background:#1a0545; color:#d8b4fe; border:1px solid rgba(168,85,247,.3); }
+    .pill.mb     { background:#061830; color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+    .pill.ms     { background:#141820; color:#d1d5db; border:1px solid rgba(107,114,128,.3); }
 
-    .r-conf-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px; }
-    .r-conf-lbl { color: #44447a; text-transform: uppercase; letter-spacing: .8px; }
-    .r-conf-pct { color: #a78bfa; font-weight: 700; }
-    .r-conf-track { height: 5px; border-radius: 99px; background: #0b0b16; overflow: hidden; }
-    .r-conf-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#6d28d9,#a78bfa); width: 0; transition: width 1.2s ease; }
+    /* confidence bar */
+    .conf-row { display:flex; justify-content:space-between; margin-bottom:5px; font-size:11px; }
+    .conf-lbl { color:#3a3a5a; text-transform:uppercase; letter-spacing:.8px; }
+    .conf-pct { color:#8b5cf6; font-weight:800; }
+    .conf-track { height:5px; border-radius:99px; background:#0a0a1c; overflow:hidden; }
+    .conf-fill  { height:100%; border-radius:99px;
+                  background:linear-gradient(90deg,#6d28d9,#a78bfa);
+                  width:0; transition:width 1.2s ease; }
 
-    .btn-refetch {
-      width: 100%; padding: 10px; margin-top: 10px;
-      background: linear-gradient(135deg,#6d28d9,#a78bfa);
-      border: none; border-radius: 11px;
-      color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: transform .15s, box-shadow .2s;
+    /* refetch btn */
+    .btn-go {
+      width:100%; padding:11px; margin-top:11px;
+      background:linear-gradient(135deg,#6d28d9,#a78bfa);
+      border:none; border-radius:12px;
+      color:#fff; font-size:13px; font-weight:800;
+      cursor:pointer; letter-spacing:.3px;
+      transition:transform .15s, box-shadow .2s;
     }
-    .btn-refetch:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(109,40,217,.5); }
-    .btn-refetch:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-go:hover   { transform:translateY(-2px); box-shadow:0 6px 20px rgba(109,40,217,.55); }
+    .btn-go:active  { transform:translateY(0); }
+    .btn-go:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+
+    /* last-10 table */
+    #last10Wrap {
+      display: none;
+      margin-top: 13px; padding-top: 12px;
+      border-top: 1px solid #1e1e38;
+    }
+    .t10-title {
+      font-size: 10px; font-weight: 800; color: #6d28d9;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      margin-bottom: 8px; padding-left: 10px;
+      border-left: 3px solid #6d28d9;
+    }
+    .t10-row {
+      display: grid;
+      grid-template-columns: 22px 1fr 28px 52px 42px;
+      gap: 4px; align-items: center;
+      padding: 5px 4px;
+      border-bottom: 1px solid #0f0f20;
+      font-size: 11px;
+    }
+    .t10-row:last-child { border-bottom: none; }
+    .t10-row:hover { background: #11112a; border-radius: 6px; }
+    .t10-i   { color: #2a2a4a; font-weight: 700; text-align: center; }
+    .t10-pid { color: #5a5a8a; font-family: monospace; font-size: 10px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .t10-n   { text-align: center; }
+    .nbadge  {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 7px;
+      background: #1a1a38; color: #a78bfa;
+      font-size: 13px; font-weight: 800;
+    }
+    .spill {
+      display: inline-block; padding: 3px 6px;
+      border-radius: 10px; font-size: 10px; font-weight: 700;
+    }
+    .spill.mb { background:#061830; color:#93c5fd; }
+    .spill.ms { background:#141820; color:#d1d5db; }
   </style>
 </head>
 <body>
 
-  <!-- Full website iframe -->
-  <iframe
-    id="siteFrame"
-    src="https://yaarwin.app/#/login"
-    allow="*"
-    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
-    title="YaarWin"
-  ></iframe>
+<!-- ══ FULL-PAGE YAARWIN IFRAME ══ -->
+<iframe
+  id="siteFrame"
+  src="https://yaarwin.app/#/login"
+  allow="*"
+  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
+  title="YaarWin"
+></iframe>
 
-  <!-- Floating Prediction Card -->
-  <div id="floatCard">
-    <span class="fc-icon-min">🎯</span>
-    <div class="fc-drag"></div>
-    <div class="fc-body">
+<!-- ══ FLOATING PREDICTION CARD ══ -->
+<div id="card">
 
-      <div class="fc-head">
-        <div class="fc-badge">
-          <div class="fc-dot" id="fcDot"></div>
-          <span id="fcBadgeText">Prediction Tool</span>
-        </div>
-        <button class="fc-min-btn" id="fcMinBtn">—</button>
+  <!-- minimised icon -->
+  <span id="miniIcon">🎯</span>
+
+  <div id="cardInner">
+    <div class="drag-bar"></div>
+
+    <!-- header -->
+    <div class="c-head">
+      <div class="c-badge">
+        <div class="cdot" id="cdot"></div>
+        <span id="cbadge">Prediction Tool</span>
       </div>
-
-      <div class="fc-msg" id="fcMsg">Login Now To Start</div>
-      <div class="fc-sub" id="fcSub">Please log in to yaarwin.app to continue</div>
-
-      <!-- Navigation buttons — user tells us which page they're on -->
-      <div id="fcNav" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-        <button class="fc-nav-btn" id="navLogin" style="flex:1;padding:7px 6px;font-size:11px;font-weight:700;background:#1e1e3a;border:1px solid #22224a;border-radius:8px;color:#a78bfa;cursor:pointer;white-space:nowrap;">📱 Login Page</button>
-        <button class="fc-nav-btn" id="navHome" style="flex:1;padding:7px 6px;font-size:11px;font-weight:700;background:#1e1e3a;border:1px solid #22224a;border-radius:8px;color:#22c55e;cursor:pointer;white-space:nowrap;">🏠 Home</button>
-        <button class="fc-nav-btn" id="navWingo" style="flex:1;padding:7px 6px;font-size:11px;font-weight:700;background:#1e1e3a;border:1px solid #22224a;border-radius:8px;color:#facc15;cursor:pointer;white-space:nowrap;">🎮 WinGo</button>
-      </div>
-
-      <div id="fcResult">
-        <div class="r-period">
-          <span class="r-period-lbl">Next Period ID</span>
-          <span class="r-period-val" id="rPeriod">—</span>
-        </div>
-        <div class="r-num" id="rNum">—</div>
-        <div class="r-grid">
-          <div class="r-cell">
-            <div class="r-lbl">Color</div>
-            <div id="rColor">—</div>
-          </div>
-          <div class="r-cell">
-            <div class="r-lbl">Size</div>
-            <div id="rSize">—</div>
-          </div>
-        </div>
-        <div class="r-conf-row">
-          <span class="r-conf-lbl">Confidence</span>
-          <span class="r-conf-pct" id="rConf">—</span>
-        </div>
-        <div class="r-conf-track">
-          <div class="r-conf-fill" id="rConfBar"></div>
-        </div>
-        <button class="btn-refetch" id="btnRefetch">🔍 Fetch Next Result</button>
-      </div>
-
+      <button class="c-min" id="cMinBtn" title="Minimise">−</button>
     </div>
-  </div>
 
-  <script src="auto-fetch.js"></script>
+    <!-- message -->
+    <div class="c-msg" id="cMsg">Login Now To Start</div>
+    <div class="c-sub" id="cSub">Please log in to yaarwin.app to continue</div>
+
+    <!-- 3 nav buttons -->
+    <div id="navRow">
+      <button class="nav-btn" id="nb-login">📱 Login</button>
+      <button class="nav-btn" id="nb-home">🏠 Home</button>
+      <button class="nav-btn" id="nb-wingo">🎮 WinGo</button>
+    </div>
+
+    <!-- last 10 records table -->
+    <div id="last10Wrap">
+      <div class="t10-title">📋 Last 10 Results</div>
+      <div id="t10Body"></div>
+    </div>
+
+    <!-- prediction result -->
+    <div id="resultPanel">
+
+      <div class="res-pid">
+        <span class="res-pid-lbl">Next Period ID</span>
+        <span class="res-pid-val" id="rPid">—</span>
+      </div>
+
+      <div class="res-num" id="rNum">—</div>
+
+      <div class="res-grid">
+        <div class="res-cell">
+          <div class="res-lbl">Color</div>
+          <div id="rColor">—</div>
+        </div>
+        <div class="res-cell">
+          <div class="res-lbl">Size</div>
+          <div id="rSize">—</div>
+        </div>
+      </div>
+
+      <div class="conf-row">
+        <span class="conf-lbl">Confidence</span>
+        <span class="conf-pct" id="rConf">—</span>
+      </div>
+      <div class="conf-track">
+        <div class="conf-fill" id="rConfBar"></div>
+      </div>
+
+      <button class="btn-go" id="btnGo">🔍 Fetch Next Result</button>
+
+    </div><!-- /resultPanel -->
+  </div><!-- /cardInner -->
+
+</div><!-- /card -->
+
+<script src="auto-fetch.js"></script>
 </body>
 </html>

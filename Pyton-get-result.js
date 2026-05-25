@@ -1,8 +1,7 @@
 /**
  * Pyton-get-result.js
- * Kept for api.php POST compatibility.
- * All UI logic is now handled by auto-fetch.js (2-screen flow).
- * This file intentionally minimal.
+ * Intentionally minimal stub.
+ * All UI, fetch, and prediction logic is in auto-fetch.js.
+ * This file is kept so no 404 occurs from older HTML references.
  */
 "use strict";
-/* No standalone init needed — auto-fetch.js owns the DOM lifecycle */
