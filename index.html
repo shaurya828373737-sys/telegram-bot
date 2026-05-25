@@ -449,7 +449,84 @@ function onNavHome() {
 
 function onNavWingo() {
   goFrame(URL_WINGO);
-  if (!isBusy) { setState("fetching"); runFetch(); }
+  if (!isBusy) {
+    setState("fetching");
+    /* Wait for iframe to load then start fetch */
+    setTimeout(function() { runFetch(); }, 4000);
+  }
+}
+
+/* Also try to inject data reader after WinGo page loads */
+document.getElementById("siteFrame").addEventListener("load", function() {
+  setTimeout(tryInjectReader, 2000);
+});
+
+function tryInjectReader() {
+  try {
+    var frame = document.getElementById("siteFrame");
+    var win   = frame.contentWindow;
+    var href  = "";
+    try { href = win.location.href; } catch(e) { return; }
+
+    if (href.includes("saasLottery") || href.includes("WinGo")) {
+      /* Try to read data from window */
+      try {
+        var data = win.gameData || win.__game_data__ || win.store;
+        if (data) {
+          /* Look for game records */
+          var list = null;
+          if (data.gameRecord) list = data.gameRecord;
+          else if (data.list) list = data.list;
+          else if (Array.isArray(data)) list = data;
+
+          if (Array.isArray(list) && list.length > 0) {
+            if (!isBusy) {
+              setState("fetching");
+              runFetchWithRecords(list);
+            }
+          }
+        }
+      } catch(e2) {}
+    }
+  } catch(e) {}
+}
+
+async function runFetchWithRecords(records) {
+  if (isBusy) return;
+  isBusy = true;
+  var btn = document.getElementById("btnGo");
+  btn.disabled = true;
+  document.getElementById("resultPanel").style.display = "none";
+  document.getElementById("last10Wrap").style.display  = "none";
+  setState("fetching");
+
+  try {
+    var res = await fetch(FETCH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ records: records })
+    });
+    var data = await res.json();
+    if (data.status === "error") throw new Error(data.error);
+    if (!Array.isArray(data.trends) || data.trends.length < 1)
+      throw new Error("No trends parsed from records.");
+
+    trends = data.trends;
+    renderLast10(trends);
+    await animatedWait(10000, 15000);
+    var pred = await callPredict(trends);
+    renderResult(pred);
+    setState("done");
+    document.getElementById("resultPanel").style.display = "block";
+  } catch(err) {
+    setState("error");
+    document.getElementById("cMsg").innerHTML = "⚠ " + String(err.message).substring(0, 120);
+    document.getElementById("cSub").textContent = "Tap 🔍 Fetch Next Result to retry";
+    document.getElementById("credForm").style.display = "block";
+  } finally {
+    isBusy = false;
+    btn.disabled = false;
+  }
 }
 
 function onMinBtn() {

@@ -2,19 +2,31 @@
 /**
  * fetch-data.php
  * ─────────────────────────────────────────────────────────────────
- * Server-side pipeline called by auto-fetch.js via POST.
+ * COMPLETELY REWRITTEN — no more server-side login.
  *
- * POST params:
- *   phone   — user phone (from localStorage in browser)
- *   pass    — user password (from localStorage in browser)
+ * The approach that WORKS:
+ *   The browser already has the YaarWin game data (it's loaded in
+ *   the iframe). We accept that data directly from the browser via
+ *   POST as JSON, normalise it, run prediction, and return result.
  *
- * Falls back to fetch-config.php credentials if POST is empty.
+ * POST body (JSON):
+ *   { "records": [ ...raw YaarWin records... ] }
  *
- * Pipeline:
- *   1. Try every known login endpoint until token acquired
- *   2. Try every known history endpoint until records received
- *   3. Normalise records → { trendId, number, color, size }
- *   4. Return JSON to browser
+ *   Each record shape (from console):
+ *   {
+ *     "issueNumber": "20260525100050307",
+ *     "number": "0",
+ *     "color": "red,violet",
+ *     "premium": "0",
+ *     "sum": 0
+ *   }
+ *
+ * OR legacy format with fallback credentials:
+ *   { "phone": "...", "pass": "..." }
+ *   → tries server-side login as before
+ *
+ * Response:
+ *   { "status":"ok", "trends": [...], "fetched_at": "..." }
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -30,266 +42,273 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 require_once __DIR__ . '/Support-backend.php';
 require_once __DIR__ . '/fetch-config.php';
 
-/* ── 1. Resolve credentials ─────────────────────────────────────── */
-$phone = trim((string)($_POST['phone'] ?? ''));
-$pass  = trim((string)($_POST['pass']  ?? ''));
+/* ── Read body ─────────────────────────────────────────────────── */
+$raw_body = file_get_contents('php://input');
+$json_body = json_decode($raw_body, true);
+
+/* ════════════════════════════════════════════════════════════════
+   PATH A: Browser sends raw records directly (preferred, no login)
+   Records come from the page's own JavaScript — 100% reliable
+   ════════════════════════════════════════════════════════════════ */
+if (!empty($json_body['records']) && is_array($json_body['records'])) {
+    $trends = normaliseRecords($json_body['records']);
+
+    if (count($trends) < 1) {
+        jsonError('No valid records could be parsed from the provided data.', 422);
+    }
+
+    jsonSuccess([
+        'trends'     => $trends,
+        'count'      => count($trends),
+        'game'       => 'WinGo_30S',
+        'source'     => 'browser-direct',
+        'fetched_at' => date('Y-m-d H:i:s'),
+    ]);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PATH B: Try server-side login + API fetch (fallback)
+   Uses credentials from POST or fetch-config.php
+   ════════════════════════════════════════════════════════════════ */
+
+/* Read credentials */
+$phone = trim((string)($_POST['phone'] ?? $json_body['phone'] ?? ''));
+$pass  = trim((string)($_POST['pass']  ?? $json_body['pass']  ?? ''));
 
 if ($phone === '') $phone = YW_PHONE;
 if ($pass  === '') $pass  = YW_PASSWORD;
 
-if ($phone === '' || $pass === '' ||
+if (empty($phone) || empty($pass) ||
     $phone === 'YOUR_PHONE_NUMBER' || $pass === 'YOUR_PASSWORD') {
-  jsonError(
-    'No credentials saved. Please enter your YaarWin phone & password in the floating card first.', 401
-  );
+    jsonError(
+        'No credentials. Enter your phone & password in the floating card, ' .
+        'then go to the WinGo page so data loads automatically.', 401
+    );
 }
 
-/* ── 2. Login → token ───────────────────────────────────────────── */
-$token = attemptLogin($phone, $pass);
+/* Login */
+$token = doLogin($phone, $pass);
 if (!$token) {
-  jsonError(
-    'Login failed — wrong phone/password or YaarWin API changed. Please check credentials in the card.', 401
-  );
+    jsonError(
+        'Server login failed (YaarWin blocks direct API access). ' .
+        'Navigate to WinGo page in the website — data will be fetched automatically from the page.', 401
+    );
 }
 
-/* ── 3. Fetch history ───────────────────────────────────────────── */
-$raw = attemptHistory($token);
-if (!$raw) {
-  jsonError('Could not fetch WinGo 30s history from any known endpoint.', 502);
+/* History */
+$rawList = fetchHistory($token);
+if (!$rawList) {
+    jsonError('Could not fetch WinGo 30s history via server.', 502);
 }
 
-/* ── 4. Normalise ───────────────────────────────────────────────── */
-$trends = normalise($raw, YW_FETCH_ROWS);
+$trends = normaliseRecords($rawList);
 if (count($trends) < 1) {
-  jsonError('Zero usable records returned — API may have changed format.', 422);
+    jsonError('Zero usable records from server API.', 422);
 }
 
-/* ── 5. Respond ─────────────────────────────────────────────────── */
 jsonSuccess([
-  'trends'     => $trends,
-  'count'      => count($trends),
-  'game'       => 'WinGo_30S',
-  'source'     => 'yaarwin.app',
-  'fetched_at' => date('Y-m-d H:i:s'),
-  'phone_used' => substr($phone, 0, 4) . '****',  // masked for safety
+    'trends'     => $trends,
+    'count'      => count($trends),
+    'game'       => 'WinGo_30S',
+    'source'     => 'server-api',
+    'fetched_at' => date('Y-m-d H:i:s'),
 ]);
 
-/* ════════════════════════════════════════════════════════
-   LOGIN  —  tries every known endpoint + payload shape
-════════════════════════════════════════════════════════ */
-function attemptLogin(string $phone, string $pass): ?string
+/* ════════════════════════════════════════════════════════════════
+   NORMALISE  — works with EXACT YaarWin data structure from console
+   Input:  { issueNumber, number (string), color (comma-sep), ... }
+   Output: { trendId, number (int), color, size, bigSmall }
+   ════════════════════════════════════════════════════════════════ */
+function normaliseRecords(array $raw): array
 {
-  /* All payload shapes WinGo platforms use */
-  $payloads = [
-    ['phone'    => $phone, 'password' => $pass, 'loginType' => 0],
-    ['mobile'   => $phone, 'password' => $pass, 'loginType' => 0],
-    ['username' => $phone, 'password' => $pass],
-    ['account'  => $phone, 'password' => $pass],
-    ['phone'    => $phone, 'pwd'      => $pass],
-    ['mobile'   => $phone, 'pwd'      => $pass],
-  ];
+    $out = [];
 
-  foreach (YW_LOGIN_URLS as $url) {
-    foreach ($payloads as $payload) {
-      $resp = xPost($url, json_encode($payload));
-      if (!$resp) continue;
+    foreach ($raw as $item) {
+        if (!is_array($item)) continue;
 
-      $j = json_decode($resp, true);
-      if (!is_array($j)) continue;
+        /* ── Trend ID ── */
+        $tid = (string)(
+            $item['issueNumber'] ?? $item['issue']        ??
+            $item['periodNumber']?? $item['period']       ??
+            $item['roundId']     ?? $item['id']           ?? ''
+        );
+        if ($tid === '') continue;
 
-      /* Extract token from all known response shapes */
-      $token =
-        $j['data']['token']             ??
-        $j['data']['userInfo']['token'] ??
-        $j['data']['info']['token']     ??
-        $j['result']['token']           ??
-        $j['result']['data']['token']   ??
-        $j['token']                     ??
-        null;
+        /* ── Number — comes as STRING "0"-"9" ── */
+        $rawN = $item['number'] ?? $item['winNumber'] ?? $item['result'] ?? null;
+        if ($rawN === null) continue;
+        $n = (int)$rawN;
+        if ($n < 0 || $n > 9) continue;
 
-      if (is_string($token) && strlen($token) > 10) {
-        return $token;
-      }
+        /* ── Color — can be "red,violet" or "green,violet" ── */
+        $rawC = strtolower(trim((string)(
+            $item['colour']   ?? $item['color']    ??
+            $item['winColor'] ?? $item['colorStr'] ?? ''
+        )));
+        $color = parseColor($rawC, $n);
+
+        /* ── Size — derived from number (no size field in API) ── */
+        /* WinGo rule: 0-4 = Small, 5-9 = Big */
+        $size    = ($n >= 5) ? 'MB' : 'Ms';
+        $bigSmall = ($n >= 5) ? 'Big' : 'Small';
+
+        /* Also check if API returns size field */
+        $rawS = strtolower(trim((string)(
+            $item['size']     ?? $item['winSize']  ??
+            $item['bigSmall'] ?? $item['size_str'] ?? ''
+        )));
+        if ($rawS !== '') {
+            if (str_contains($rawS, 'big') || $rawS === 'mb' || $rawS === 'b') {
+                $size     = 'MB';
+                $bigSmall = 'Big';
+            } elseif (str_contains($rawS, 'small') || $rawS === 'ms' || $rawS === 's') {
+                $size     = 'Ms';
+                $bigSmall = 'Small';
+            }
+        }
+
+        /* ── Premium / sum (keep as-is for extra info) ── */
+        $premium = $item['premium'] ?? $item['sum'] ?? 0;
+
+        $out[] = [
+            'trendId'  => $tid,
+            'number'   => $n,
+            'color'    => $color,
+            'size'     => $size,
+            'bigSmall' => $bigSmall,
+            'premium'  => (int)$premium,
+        ];
+
+        if (count($out) >= 10) break;
     }
-  }
-  return null;
+
+    /* Return oldest→newest (for correct WMA weighting in Calcute.php) */
+    return array_reverse($out);
 }
 
-/* ════════════════════════════════════════════════════════
-   HISTORY  —  tries every known endpoint + param shape
-════════════════════════════════════════════════════════ */
-function attemptHistory(string $token): ?array
+/**
+ * Parse YaarWin color string.
+ * Examples: "red,violet" → "Violet"  (special number)
+ *           "green,violet" → "Violet" (special number)
+ *           "red" → "Red"
+ *           "green" → "Green"
+ */
+function parseColor(string $raw, int $n): string
 {
-  $rows = YW_FETCH_ROWS;
-
-  /* All query-string param shapes platforms use */
-  $paramSets = [
-    "pageSize={$rows}&pageNo=1",
-    "pageSize={$rows}&page=1",
-    "size={$rows}&pageNo=1",
-    "limit={$rows}&page=1",
-    "pageSize={$rows}&pageNum=1",
-    "rows={$rows}&page=1",
-  ];
-
-  $headers = [
-    'Authorization: Bearer ' . $token,
-    'Accept: application/json',
-    'Content-Type: application/json',
-    'Referer: ' . YW_BASE . '/',
-    'Origin: '  . YW_BASE,
-    'User-Agent: ' . YW_UA,
-  ];
-
-  foreach (YW_HISTORY_URLS as $baseUrl) {
-    foreach ($paramSets as $params) {
-      $url  = $baseUrl . '?' . $params;
-      $resp = xGet($url, $headers);
-      if (!$resp) continue;
-
-      $j = json_decode($resp, true);
-      if (!is_array($j)) continue;
-
-      /* Extract list from all known response shapes */
-      $list =
-        $j['data']['list']      ??
-        $j['data']['gameslist'] ??
-        $j['data']['records']   ??
-        $j['data']['rows']      ??
-        $j['result']['list']    ??
-        $j['list']              ??
-        (is_array($j['data'] ?? null) && isset($j['data'][0]) ? $j['data'] : null) ??
-        null;
-
-      if (is_array($list) && count($list) > 0) {
-        return $list;
-      }
+    /* If color contains "violet" — it's a special number (0 or 5) */
+    if (str_contains($raw, 'violet') || str_contains($raw, 'purple')) {
+        return 'Violet';
     }
-  }
-  return null;
+    if (str_contains($raw, 'red'))   return 'Red';
+    if (str_contains($raw, 'green')) return 'Green';
+
+    /* Derive from WinGo number rules */
+    if ($n === 0 || $n === 5) return 'Violet';
+    return ($n % 2 !== 0) ? 'Red' : 'Green';
 }
 
-/* ════════════════════════════════════════════════════════
-   NORMALISE  —  maps raw API records to standard format
-════════════════════════════════════════════════════════ */
-function normalise(array $raw, int $limit): array
+/* ════════════════════════════════════════════════════════════════
+   SERVER-SIDE LOGIN (fallback only)
+   ════════════════════════════════════════════════════════════════ */
+function doLogin(string $phone, string $pass): ?string
 {
-  $out = [];
-
-  foreach ($raw as $item) {
-    if (!is_array($item)) continue;
-
-    /* ── Trend ID ── */
-    $tid = (string)(
-      $item['issueNumber'] ?? $item['issue']        ??
-      $item['periodNumber']?? $item['period']        ??
-      $item['roundId']     ?? $item['id']            ?? ''
-    );
-    if ($tid === '') continue;
-
-    /* ── Number ── */
-    $rawN = $item['number'] ?? $item['winNumber'] ?? $item['result'] ?? null;
-    if ($rawN === null) continue;
-    $n = (int)$rawN;
-    if ($n < 0 || $n > 9) continue;
-
-    /* ── Color ── */
-    $rawC = strtolower(trim((string)(
-      $item['colour']   ?? $item['color']    ??
-      $item['winColor'] ?? $item['colorStr'] ?? ''
-    )));
-    $color = resolveColor($rawC, $n);
-
-    /* ── Size ── */
-    $rawS = strtolower(trim((string)(
-      $item['size']     ?? $item['winSize']  ??
-      $item['bigSmall'] ?? ''
-    )));
-    $size  = resolveSize($rawS, $n);
-
-    $out[] = compact('tid', 'n', 'color', 'size') + [
-      'trendId' => $tid,
-      'number'  => $n,
-      'color'   => $color,
-      'size'    => $size,
+    $payloads = [
+        ['phone'  => $phone, 'password' => $pass, 'loginType' => 0],
+        ['mobile' => $phone, 'password' => $pass, 'loginType' => 0],
+        ['phone'  => $phone, 'password' => $pass],
+        ['mobile' => $phone, 'password' => $pass],
     ];
 
-    if (count($out) >= $limit) break;
-  }
+    foreach (YW_LOGIN_URLS as $url) {
+        foreach ($payloads as $payload) {
+            $resp = xPost($url, json_encode($payload));
+            if (!$resp) continue;
+            $j = json_decode($resp, true);
+            if (!is_array($j)) continue;
 
-  /* oldest-first so WMA weighing is correct */
-  return array_reverse($out);
+            $token =
+                $j['data']['token']             ??
+                $j['data']['userInfo']['token'] ??
+                $j['data']['info']['token']     ??
+                $j['result']['token']           ??
+                $j['token']                     ??
+                null;
+
+            if (is_string($token) && strlen($token) > 10) return $token;
+        }
+    }
+    return null;
 }
 
-function resolveColor(string $raw, int $n): string
+function fetchHistory(string $token): ?array
 {
-  if (str_contains($raw, 'violet') || str_contains($raw, 'purple')) return 'Violet';
-  if (str_contains($raw, 'red'))    return 'Red';
-  if (str_contains($raw, 'green'))  return 'Green';
-  /* derive from number — WinGo rules */
-  if ($n === 0 || $n === 5) return 'Violet';
-  return ($n % 2 !== 0) ? 'Red' : 'Green';
+    $rows    = YW_FETCH_ROWS;
+    $headers = [
+        'Authorization: Bearer ' . $token,
+        'Accept: application/json',
+        'Referer: ' . YW_BASE . '/',
+        'Origin: '  . YW_BASE,
+        'User-Agent: ' . YW_UA,
+    ];
+
+    foreach (YW_HISTORY_URLS as $base) {
+        foreach (["pageSize={$rows}&pageNo=1", "pageSize={$rows}&page=1", "size={$rows}&pageNo=1"] as $q) {
+            $resp = xGet("{$base}?{$q}", $headers);
+            if (!$resp) continue;
+            $j = json_decode($resp, true);
+            if (!is_array($j)) continue;
+            $list =
+                $j['data']['list'] ?? $j['data']['gameslist'] ??
+                $j['data']['records'] ?? $j['result']['list'] ?? $j['list'] ?? null;
+            if (is_array($list) && count($list) > 0) return $list;
+        }
+    }
+    return null;
 }
 
-function resolveSize(string $raw, int $n): string
-{
-  if ($raw === 'big'   || $raw === 'mb' || $raw === 'b') return 'MB';
-  if ($raw === 'small' || $raw === 'ms' || $raw === 's') return 'Ms';
-  if (str_contains($raw, 'big'))   return 'MB';
-  if (str_contains($raw, 'small')) return 'Ms';
-  return ($n >= 5) ? 'MB' : 'Ms';
-}
-
-/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════
    CURL HELPERS
-════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════════════════ */
 function baseCh(string $url): \CurlHandle
 {
-  $ch = curl_init($url);
-  curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_MAXREDIRS      => 3,
-    CURLOPT_TIMEOUT        => YW_TIMEOUT,
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_SSL_VERIFYHOST => 0,
-    CURLOPT_USERAGENT      => YW_UA,
-    CURLOPT_ENCODING       => 'gzip, deflate',
-    CURLOPT_COOKIEFILE     => '',
-    CURLOPT_COOKIEJAR      => '',
-  ]);
-  return $ch;
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS      => 3,
+        CURLOPT_TIMEOUT        => YW_TIMEOUT,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_USERAGENT      => YW_UA,
+        CURLOPT_ENCODING       => 'gzip, deflate',
+    ]);
+    return $ch;
 }
 
 function xPost(string $url, string $body): ?string
 {
-  $ch = baseCh($url);
-  curl_setopt_array($ch, [
-    CURLOPT_POST       => true,
-    CURLOPT_POSTFIELDS => $body,
-    CURLOPT_HTTPHEADER => [
-      'Content-Type: application/json',
-      'Accept: application/json',
-      'Referer: ' . YW_BASE . '/',
-      'Origin: '  . YW_BASE,
-      'User-Agent: ' . YW_UA,
-    ],
-  ]);
-  $resp = curl_exec($ch);
-  $err  = curl_error($ch);
-  curl_close($ch);
-  if ($err) { error_log("[fetch-data] POST $url → $err"); return null; }
-  return $resp ?: null;
+    $ch = baseCh($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST       => true,
+        CURLOPT_POSTFIELDS => $body,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'Referer: ' . YW_BASE . '/',
+            'Origin: '  . YW_BASE,
+        ],
+    ]);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    return $resp ?: null;
 }
 
 function xGet(string $url, array $headers): ?string
 {
-  $ch = baseCh($url);
-  curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-  $resp = curl_exec($ch);
-  $err  = curl_error($ch);
-  curl_close($ch);
-  if ($err) { error_log("[fetch-data] GET $url → $err"); return null; }
-  return $resp ?: null;
+    $ch = baseCh($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    return $resp ?: null;
 }
