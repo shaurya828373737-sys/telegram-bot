@@ -98,7 +98,68 @@ function goHome() {
 function goWingo() {
   document.getElementById("frame").src =
     "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
-  startOver();
+
+  /* Try to auto-fetch from the public API first */
+  setState("fetching");
+  hide("entryPanel"); hide("resultArea"); show("progBar");
+  document.getElementById("pgTxt").textContent = "Fetching live data…";
+  document.getElementById("pgFill").style.width = "30%";
+
+  autoFetchFromAPI();
+}
+
+/* Auto-fetch from public API — no login needed */
+async function autoFetchFromAPI() {
+  try {
+    var res  = await fetch("fetch-data.php", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body:    JSON.stringify({ auto: true })
+    });
+    var data = await res.json();
+
+    if (data.status === "error") throw new Error(data.error);
+    if (!Array.isArray(data.trends) || data.trends.length < 1)
+      throw new Error("No trend data.");
+
+    savedTrends = data.trends.map(function(t) {
+      return {
+        trendId:  t.trendId,
+        number:   t.number,
+        color:    t.color,
+        size:     t.size,
+        bigSmall: t.bigSmall || (t.size === "MB" ? "Big" : "Small"),
+        rawColor: t.color
+      };
+    });
+
+    /* Show the data was fetched */
+    document.getElementById("pgTxt").textContent = "✅ Got " + savedTrends.length + " live results!";
+    document.getElementById("pgFill").style.width = "100%";
+    document.getElementById("sub").textContent = "Live data loaded — running prediction…";
+
+    /* Render the last-10 table */
+    renderAllSaved();
+    updateProgress();
+
+    /* Run prediction automatically */
+    setTimeout(function() {
+      hide("entryPanel");
+      runPrediction();
+    }, 1200);
+
+  } catch(err) {
+    /* API failed — fall back to manual entry */
+    savedTrends = [];
+    resetEntry();
+    document.getElementById("pgTxt").textContent = "0 / 10 trends entered";
+    document.getElementById("pgFill").style.width = "0%";
+    setState("entry");
+    show("entryPanel");
+    document.getElementById("sub").textContent =
+      "Auto-fetch failed: " + String(err.message).substring(0,60) + " — Enter manually below";
+    updateEntryTitle();
+  }
 }
 
 /* ── PICK HANDLERS (unique names, no clash) ── */
