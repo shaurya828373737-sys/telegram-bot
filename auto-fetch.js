@@ -1,32 +1,22 @@
 "use strict";
-/* ═══════════════════════════════════════════════════════
-   auto-fetch.js  —  Manual Trend Entry Controller
-   
-   Flow:
-   1. User taps 🎮 WinGo → entry panel appears
-   2. For each of 10 trends:
-      a. Enter Period ID (optional)
-      b. Tap number button (0-9)
-      c. Tap colour button (Red/Green/Violet/R+V/G+V)
-      d. Tap size button (Big/Small)
-      e. Tap "Save Trend #N" → row saved, next opens
-   3. After 10 saved → "Getting Accurate Result…"
-   4. Sends to fetch-data.php → api.php → shows prediction
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════
+   auto-fetch.js  — Manual Trend Entry
+   Fixed: No Period ID. pickColour/pickSize
+   don't clash with variable names.
+   cardClick won't block inner buttons.
+═══════════════════════════════════ */
 
-var FETCH_URL   = "fetch-data.php";
 var PREDICT_URL = "api.php";
-var isMini = false;
-var savedTrends = [];
-var selNum  = null;
-var selCol  = null;
-var selSize = null;
+window.isMini   = false;
+var savedTrends  = [];
+var pickedNum    = null;
+var pickedColor  = null;
+var pickedSize   = null;
 
 var COLOR_MAP = {
-  "Red":"red","Green":"green","Violet":"violet",
-  "RedViolet":"violet","GreenViolet":"violet"
+  "Red":"r","Green":"g","Violet":"v",
+  "RedViolet":"v","GreenViolet":"v"
 };
-var SIZE_MAP  = { "Big":"mb","Small":"ms" };
 
 var WAIT_STEPS = [
   "🔐 Connecting to YaarWin engine…",
@@ -37,66 +27,64 @@ var WAIT_STEPS = [
   "✨ Generating prediction…"
 ];
 
-/* ── BOOT ── */
 window.addEventListener("DOMContentLoaded", function() {
   buildNumGrid();
   setState("login");
 });
 
-/* ── BUILD 0-9 NUM GRID ── */
 function buildNumGrid() {
   var g = document.getElementById("numGrid");
+  if (!g) return;
   g.innerHTML = "";
   for (var i = 0; i <= 9; i++) {
-    (function(n){
+    (function(n) {
       var b = document.createElement("button");
-      b.className = "nmb";
+      b.className   = "nmb";
       b.textContent = n;
-      b.setAttribute("data-n", n);
-      b.onclick = function(){ selNumber(b); return false; };
+      b.dataset.n   = n;
+      b.onclick = function(e) { e.stopPropagation(); pickNum(b); };
       g.appendChild(b);
     })(i);
   }
 }
 
-/* ── STATE ── */
 function setState(s) {
   var dot   = document.getElementById("dot");
   var badge = document.getElementById("badge");
   var msg   = document.getElementById("msg");
   var sub   = document.getElementById("sub");
+  if (!dot) return;
   dot.className = "dot";
-  if (s==="login") {
+  if (s === "login") {
     badge.textContent = "Prediction Tool";
-    msg.innerHTML  = "🔐 Login Now To Start";
-    sub.textContent = "Log in to yaarwin.app, then tap 🎮 WinGo";
-  } else if (s==="home") {
+    msg.innerHTML = "🔐 Login Now To Start";
+    sub.textContent = "Log in to yaarwin.app then tap 🎮 WinGo";
+  } else if (s === "home") {
     dot.classList.add("g");
     badge.textContent = "Connected ✅";
-    msg.innerHTML  = "✅ Login Successful";
+    msg.innerHTML = "✅ Login Successful";
     sub.textContent = "Tap 🎮 WinGo to start entering trends";
-  } else if (s==="entry") {
+  } else if (s === "entry") {
     dot.classList.add("y");
     badge.textContent = "Entering Trends";
-    msg.innerHTML  = 'Enter Trend <span class="ldots"><span></span><span></span><span></span></span>';
-    sub.textContent = "Fill number, colour & size, then save";
-  } else if (s==="waiting") {
+    msg.innerHTML = "Enter Trend #" + (savedTrends.length + 1);
+    sub.textContent = "Tap number → colour → size → Save";
+  } else if (s === "waiting") {
     dot.classList.add("y");
     badge.textContent = "Analyzing…";
-    msg.innerHTML  = 'Getting Accurate Result <span class="ldots"><span></span><span></span><span></span></span>';
+    msg.innerHTML = 'Getting Result <span class="ldots"><span></span><span></span><span></span></span>';
     sub.textContent = WAIT_STEPS[0];
-  } else if (s==="done") {
+  } else if (s === "done") {
     dot.classList.add("g");
     badge.textContent = "Prediction Ready ✅";
-    msg.innerHTML  = "🎯 Next Result Predicted";
+    msg.innerHTML = "🎯 Next Result Predicted";
     sub.textContent = "Based on your 10 entered trends";
-  } else if (s==="error") {
+  } else if (s === "error") {
     dot.classList.add("r");
     badge.textContent = "Error";
   }
 }
 
-/* ── IFRAME NAV ── */
 function goLogin() {
   document.getElementById("frame").src = "https://yaarwin.app/#/login";
   setState("login");
@@ -110,87 +98,77 @@ function goHome() {
 function goWingo() {
   document.getElementById("frame").src =
     "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
-  savedTrends = [];
-  selNum = null; selCol = null; selSize = null;
-  resetEntry();
-  setState("entry");
-  show("entryPanel"); show("progBar");
-  hide("resultArea");
-  updateProgress();
-  updateEntryTitle();
+  startOver();
 }
 
-/* ── RESET ENTRY FORM ── */
+/* ── PICK HANDLERS (unique names, no clash) ── */
+function pickNum(btn) {
+  document.querySelectorAll(".nmb").forEach(function(b) { b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  pickedNum = parseInt(btn.dataset.n);
+  /* auto colour if not yet picked */
+  if (!pickedColor) {
+    var autoC = (pickedNum === 0 || pickedNum === 5) ? "Violet"
+              : (pickedNum % 2 !== 0 ? "Red" : "Green");
+    applyColour(autoC);
+  }
+  /* auto size if not yet picked */
+  if (!pickedSize) {
+    applySize(pickedNum >= 5 ? "Big" : "Small");
+  }
+  document.getElementById("sub").textContent =
+    "Num " + pickedNum + " ✓  — check colour & size then Save";
+}
+
+/* called from HTML: onclick="pickColour(this)" */
+function pickColour(btn) {
+  btn.parentElement.querySelectorAll(".ob").forEach(function(b) { b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  pickedColor = btn.dataset.c;
+}
+
+/* called from HTML: onclick="pickSize(this)" */
+function pickSize(btn) {
+  btn.parentElement.querySelectorAll(".ob").forEach(function(b) { b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  pickedSize = btn.dataset.s;
+}
+
+function applyColour(name) {
+  document.querySelectorAll("#colGroup .ob").forEach(function(b) {
+    b.classList.remove("sel");
+    if (b.dataset.c === name) b.classList.add("sel");
+  });
+  pickedColor = name;
+}
+function applySize(name) {
+  document.querySelectorAll("#sizeGroup .ob").forEach(function(b) {
+    b.classList.remove("sel");
+    if (b.dataset.s === name) b.classList.add("sel");
+  });
+  pickedSize = name;
+}
+
 function resetEntry() {
-  /* clear number selection */
-  document.querySelectorAll(".nmb").forEach(function(b){ b.classList.remove("sel"); });
-  /* clear colour */
-  document.querySelectorAll("#colGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
-  /* clear size */
-  document.querySelectorAll("#sizeGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
-  /* clear period id */
-  document.getElementById("inId").value = "";
-  /* reset local vars */
-  selNum = null; selCol = null; selSize = null;
+  document.querySelectorAll(".nmb").forEach(function(b) { b.classList.remove("sel"); });
+  document.querySelectorAll("#colGroup .ob").forEach(function(b) { b.classList.remove("sel"); });
+  document.querySelectorAll("#sizeGroup .ob").forEach(function(b) { b.classList.remove("sel"); });
+  pickedNum = null; pickedColor = null; pickedSize = null;
 }
 
-/* ── SELECTION HANDLERS ── */
-function selNumber(btn) {
-  document.querySelectorAll(".nmb").forEach(function(b){ b.classList.remove("sel"); });
-  btn.classList.add("sel");
-  selNum = parseInt(btn.getAttribute("data-n"));
-
-  /* auto-derive colour and size from number — user can override */
-  autoDerive(selNum);
-}
-
-function autoDerive(n) {
-  /* WinGo rules: 0,5=violet; odd=red; even=green; ≥5=Big; <5=Small */
-  var autoC = n===0||n===5 ? "Violet" : (n%2!==0 ? "Red" : "Green");
-  /* Only auto-select if nothing chosen yet */
-  if (!selCol) {
-    document.querySelectorAll("#colGroup .ob").forEach(function(b){
-      b.classList.remove("sel");
-      if (b.getAttribute("data-c")===autoC) { b.classList.add("sel"); selCol=autoC; }
-    });
-  }
-  if (!selSize) {
-    var autoS = n>=5 ? "Big" : "Small";
-    document.querySelectorAll("#sizeGroup .ob").forEach(function(b){
-      b.classList.remove("sel");
-      if (b.getAttribute("data-s")===autoS) { b.classList.add("sel"); selSize=autoS; }
-    });
-  }
-}
-
-function selCol(btn) {
-  document.querySelectorAll("#colGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
-  btn.classList.add("sel");
-  selCol = btn.getAttribute("data-c");
-}
-
-function selSize(btn) {
-  document.querySelectorAll("#sizeGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
-  btn.classList.add("sel");
-  selSize = btn.getAttribute("data-s");
-}
-
-/* ── SAVE TREND ── */
+/* ── SAVE ── */
 function saveTrend() {
-  if (selNum === null) { flash("Please select a Number (0-9)"); return; }
-  if (!selCol)         { flash("Please select a Colour"); return; }
-  if (!selSize)        { flash("Please select Size (Big/Small)"); return; }
-
-  var pid = document.getElementById("inId").value.trim();
-  if (!pid) { pid = autoId(); }
+  if (pickedNum === null) { flash("Select a Number first"); return; }
+  if (!pickedColor)       { flash("Select a Colour"); return; }
+  if (!pickedSize)        { flash("Select Size (Big/Small)"); return; }
 
   var trend = {
-    trendId: pid,
-    number:  selNum,
-    color:   resolveDisplayColor(selCol),
-    size:    selSize === "Big" ? "MB" : "Ms",
-    bigSmall:selSize,
-    rawColor:selCol
+    trendId:  autoId(),
+    number:   pickedNum,
+    color:    resolveColor(pickedColor),
+    size:     pickedSize === "Big" ? "MB" : "Ms",
+    bigSmall: pickedSize,
+    rawColor: pickedColor
   };
 
   savedTrends.push(trend);
@@ -198,106 +176,104 @@ function saveTrend() {
   updateProgress();
 
   if (savedTrends.length >= 10) {
-    /* All 10 entered — run prediction */
     hide("entryPanel");
     runPrediction();
   } else {
-    updateEntryTitle();
     resetEntry();
-    /* Flash success */
     var n = savedTrends.length;
-    setSubText("✅ Trend " + n + " saved! Enter trend " + (n+1));
+    setState("entry");
+    document.getElementById("sub").textContent =
+      "✅ Trend " + n + " saved! Now enter trend " + (n + 1);
+    updateEntryTitle();
   }
 }
 
-
-/* ── DELETE SAVED TREND ── */
+/* ── DELETE ── */
 function deleteTrend(idx) {
   savedTrends.splice(idx, 1);
   renderAllSaved();
   updateProgress();
   updateEntryTitle();
+  setState("entry");
   show("entryPanel");
   hide("resultArea");
 }
 
-/* ── RENDER SAVED ROW ── */
+/* ── RENDER SAVED ROW (no Period ID shown) ── */
 function renderSavedRow(t, idx) {
   var list = document.getElementById("savedList");
-  var row = document.createElement("div");
+  var row  = document.createElement("div");
   row.className = "sv";
-  row.id = "sv_" + idx;
-  var cl  = COLOR_MAP[t.rawColor] || COLOR_MAP[t.color] || "r";
-  var clLabel = colorLabel(t.rawColor, cl);
+  row.id        = "sv_" + idx;
+  var cl   = COLOR_MAP[t.rawColor] || "r";
+  var clLb = colorLabel(t.rawColor);
   var szCl = t.size === "MB" ? "rb-big" : "rb-sml";
   row.innerHTML =
-    '<span class="sv-i">' + (idx+1) + '</span>' +
-    '<span class="sv-pid">' + shortId(t.trendId) + '</span>' +
+    '<span class="sv-i">' + (idx + 1) + '</span>' +
     '<span class="sv-n">' + t.number + '</span>' +
-    '<span class="sv-c rbadge rb-' + cl + '" style="font-size:10px;padding:2px 5px">' + clLabel + '</span>' +
-    '<span class="sv-s rbadge ' + szCl + '" style="font-size:10px;padding:2px 5px">' + t.bigSmall + '</span>' +
+    '<span class="sv-c rbadge rb-' + cl + '">' + clLb + '</span>' +
+    '<span class="sv-s rbadge ' + szCl + '">' + t.bigSmall + '</span>' +
     '<button class="sv-del" onclick="deleteTrend(' + idx + ');return false;">✕</button>';
   list.appendChild(row);
 }
 
 function renderAllSaved() {
   var list = document.getElementById("savedList");
+  if (!list) return;
   list.innerHTML = "";
-  savedTrends.forEach(function(t, i){ renderSavedRow(t, i); });
+  savedTrends.forEach(function(t, i) { renderSavedRow(t, i); });
 }
 
-/* ── UPDATE PROGRESS ── */
+/* ── PROGRESS ── */
 function updateProgress() {
-  var n = savedTrends.length;
-  var pct = Math.round((n/10)*100);
-  document.getElementById("pgTxt").textContent = n + " / 10 trends entered";
-  document.getElementById("pgPct").textContent = pct + "%";
-  document.getElementById("pgFill").style.width = pct + "%";
+  var n   = savedTrends.length;
+  var pct = Math.round((n / 10) * 100);
+  var pt  = document.getElementById("pgTxt");
+  var pp  = document.getElementById("pgPct");
+  var pf  = document.getElementById("pgFill");
+  if (pt) pt.textContent  = n + " / 10 trends entered";
+  if (pp) pp.textContent  = pct + "%";
+  if (pf) pf.style.width  = pct + "%";
 }
-
 function updateEntryTitle() {
-  var n = savedTrends.length + 1;
+  var n  = savedTrends.length + 1;
+  var et = document.getElementById("entTitle");
+  var sl = document.getElementById("saveLbl");
   if (n <= 10) {
-    document.getElementById("entTitle").textContent = "Enter Trend #" + n;
-    document.getElementById("saveLbl").textContent  = n;
+    if (et) et.textContent = "Enter Trend #" + n;
+    if (sl) sl.textContent = n;
   }
 }
 
-/* ── RUN PREDICTION ── */
+/* ── PREDICTION ── */
 async function runPrediction() {
   setState("waiting");
   show("progBar");
   hide("resultArea");
 
-  /* Animated wait */
   var total = 10000 + Math.random() * 5000;
   var step  = total / WAIT_STEPS.length;
   var idx   = 0;
-  var timer = setInterval(function(){
+  var sub   = document.getElementById("sub");
+  var timer = setInterval(function() {
     idx++;
-    if (idx < WAIT_STEPS.length) setSubText(WAIT_STEPS[idx]);
+    if (idx < WAIT_STEPS.length && sub)
+      sub.textContent = WAIT_STEPS[idx];
     else clearInterval(timer);
   }, step);
 
   try {
-    /* Build proper trend list for api.php */
     var trendList = savedTrends.map(function(t) {
-      return {
-        trendId: t.trendId,
-        number:  t.number,
-        color:   t.color,
-        size:    t.size
-      };
+      return { trendId: t.trendId, number: t.number, color: t.color, size: t.size };
     });
 
-    await new Promise(function(r){ setTimeout(r, total); });
+    await new Promise(function(r) { setTimeout(r, total); });
     clearInterval(timer);
 
-    /* Call api.php prediction engine */
-    var res = await fetch(PREDICT_URL, {
-      method: "POST",
+    var res  = await fetch(PREDICT_URL, {
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trends: trendList })
+      body:    JSON.stringify({ trends: trendList })
     });
     var pred = await res.json();
     if (pred.status === "error") throw new Error(pred.error);
@@ -305,39 +281,47 @@ async function runPrediction() {
     renderResult(pred);
     setState("done");
 
-  } catch(err) {
+  } catch (err) {
     clearInterval(timer);
     setState("error");
-    document.getElementById("msg").innerHTML = "⚠ " + String(err.message).substring(0,120);
-    setSubText("Tap 🔄 Start Over to try again");
-    show("resultArea");
-    document.getElementById("resultArea").innerHTML =
-      '<button class="bagain" onclick="startOver();return false;">🔄 Enter New 10 Trends</button>';
+    var msg = document.getElementById("msg");
+    if (msg) msg.innerHTML = "⚠ " + String(err.message).substring(0, 120);
+    if (sub) sub.textContent = "Tap 🔄 to try again";
+    var ra = document.getElementById("resultArea");
+    if (ra) {
+      ra.style.display = "block";
+      ra.innerHTML =
+        '<button class="bagain" onclick="startOver();return false;">🔄 Enter New 10 Trends</button>';
+    }
   }
 }
 
 /* ── RENDER RESULT ── */
 function renderResult(pred) {
   var n = pred.predicted_number;
-  document.getElementById("rNum").textContent = (n !== undefined && n !== null) ? n : "—";
-  document.getElementById("rPid").textContent = pred.predicted_trend_id || "Next Period";
+  var rn = document.getElementById("rNum");
+  if (rn) rn.textContent = (n !== null && n !== undefined) ? n : "—";
 
-  var c = (pred.predicted_color || "").toLowerCase();
-  if (c.includes("violet")) c = "v";
-  else if (c==="red")   c = "r";
-  else if (c==="green") c = "g";
-  var colEl = document.getElementById("rCol");
-  colEl.className = "rbadge rb-" + c;
-  colEl.textContent = pred.predicted_color || "—";
+  var rp = document.getElementById("rPid");
+  if (rp) rp.textContent = pred.predicted_trend_id || "—";
 
-  var s = (pred.predicted_size || "").toLowerCase();
-  var szEl = document.getElementById("rSz");
-  szEl.className = "rbadge " + (s==="mb" ? "rb-big" : "rb-sml");
-  szEl.textContent = s==="mb" ? "🔼 Big" : "🔽 Small";
+  var c    = (pred.predicted_color || "").toLowerCase();
+  var cKey = c.includes("violet") ? "v" : c === "red" ? "r" : "g";
+  var ce   = document.getElementById("rCol");
+  if (ce) { ce.className = "rbadge rb-" + cKey; ce.textContent = pred.predicted_color || "—"; }
+
+  var s  = (pred.predicted_size || "").toLowerCase();
+  var se = document.getElementById("rSz");
+  if (se) {
+    se.className   = "rbadge " + (s === "mb" ? "rb-big" : "rb-sml");
+    se.textContent = s === "mb" ? "🔼 Big" : "🔽 Small";
+  }
 
   var conf = +(pred.confidence || 0);
-  document.getElementById("rConf").textContent = conf + "%";
-  setTimeout(function(){ document.getElementById("rFill").style.width = conf + "%"; }, 80);
+  var rc   = document.getElementById("rConf");
+  var rf   = document.getElementById("rFill");
+  if (rc) rc.textContent = conf + "%";
+  if (rf) setTimeout(function() { rf.style.width = conf + "%"; }, 80);
 
   show("resultArea");
 }
@@ -345,68 +329,52 @@ function renderResult(pred) {
 /* ── START OVER ── */
 function startOver() {
   savedTrends = [];
-  selNum = null; selCol = null; selSize = null;
+  pickedNum = null; pickedColor = null; pickedSize = null;
   resetEntry();
-  renderAllSaved();
+  var sl = document.getElementById("savedList");
+  if (sl) sl.innerHTML = "";
   updateProgress();
-  updateEntryTitle();
   setState("entry");
+  updateEntryTitle();
   show("entryPanel"); show("progBar");
   hide("resultArea");
 }
 
-/* ── MINI / RESTORE ── */
+/* ── MINI ── */
 function doMin() {
-  isMini = true;
+  window.isMini = true;
   document.getElementById("card").classList.add("mini");
-}
-function cardClick() {
-  if (isMini) {
-    isMini = false;
-    document.getElementById("card").classList.remove("mini");
-  }
 }
 
 /* ── HELPERS ── */
-function show(id){ var e=document.getElementById(id); if(e) e.style.display="block"; }
-function hide(id){ var e=document.getElementById(id); if(e) e.style.display="none"; }
-function setSubText(t){ document.getElementById("sub").textContent = t; }
+function show(id) { var e = document.getElementById(id); if (e) e.style.display = "block"; }
+function hide(id) { var e = document.getElementById(id); if (e) e.style.display = "none";  }
 
 function flash(msg) {
   var s = document.getElementById("sub");
-  s.style.color = "#ef4444";
-  s.textContent = "⚠ " + msg;
-  setTimeout(function(){ s.style.color=""; s.textContent="Fill all fields then save"; }, 2000);
+  if (!s) return;
+  s.style.color   = "#ef4444";
+  s.textContent   = "⚠ " + msg;
+  setTimeout(function() {
+    s.style.color = "";
+    s.textContent = "Tap number → colour → size → Save";
+  }, 2200);
 }
 
 function autoId() {
-  /* Generate a plausible issueNumber if not entered */
   var d = new Date();
-  var base = d.getFullYear().toString() +
-    String(d.getMonth()+1).padStart(2,"0") +
-    String(d.getDate()).padStart(2,"0") +
-    "100050" + String(300 + savedTrends.length).padStart(3,"0");
-  return base;
+  return d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    String(d.getDate()).padStart(2, "0") +
+    "100050" + String(300 + savedTrends.length).padStart(3, "0");
 }
 
-function shortId(id) {
-  return id.length > 12 ? "…" + id.slice(-8) : id;
+function resolveColor(raw) {
+  return { Red:"Red", Green:"Green", Violet:"Violet",
+           RedViolet:"Violet", GreenViolet:"Violet" }[raw] || raw;
 }
 
-function resolveDisplayColor(raw) {
-  if (raw==="Red")         return "Red";
-  if (raw==="Green")       return "Green";
-  if (raw==="Violet")      return "Violet";
-  if (raw==="RedViolet")   return "Violet";
-  if (raw==="GreenViolet") return "Violet";
-  return raw;
-}
-
-function colorLabel(raw, cl) {
-  if (raw==="RedViolet")   return "R+Violet";
-  if (raw==="GreenViolet") return "G+Violet";
-  if (cl==="r") return "Red";
-  if (cl==="g") return "Green";
-  if (cl==="v") return "Violet";
-  return raw || "?";
+function colorLabel(raw) {
+  return { Red:"Red", Green:"Green", Violet:"Violet",
+           RedViolet:"R+V", GreenViolet:"G+V" }[raw] || raw || "?";
 }

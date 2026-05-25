@@ -73,7 +73,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-ser
 
 /* saved mini list */
 #savedList{margin-top:9px;max-height:115px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#252545 transparent}
-.sv{display:grid;grid-template-columns:18px 1fr 22px 1fr 1fr 20px;gap:4px;align-items:center;padding:4px 5px;background:#0d0d24;border-radius:7px;margin-bottom:3px;font-size:10px}
+.sv{display:grid;grid-template-columns:18px 22px 1fr 1fr 20px;gap:5px;align-items:center;padding:5px 6px;background:#0d0d24;border-radius:7px;margin-bottom:3px;font-size:10px}
 .sv-i{color:#333;font-weight:700;text-align:center}.sv-pid{color:#44447a;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sv-n{width:20px;height:20px;background:#252545;border-radius:5px;font-size:11px;font-weight:800;color:#a78bfa;text-align:center;line-height:20px}
 .sv-c,.sv-s{padding:2px 5px;border-radius:8px;font-size:10px;font-weight:700;text-align:center}
@@ -110,7 +110,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-ser
 <iframe id="frame" src="https://yaarwin.app/#/login" allow="*"
   sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"></iframe>
 
-<div id="card" onclick="cardClick()">
+<div id="card" onclick="if(window.isMini){window.isMini=false;document.getElementById('card').classList.remove('mini')}"
   <span id="mico">🎯</span>
   <div class="dbar"></div>
   <div id="body">
@@ -138,12 +138,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-ser
     <div id="entryPanel">
       <div class="ent-title" id="entTitle">Enter Trend #1</div>
 
-      <!-- Trend ID (optional) -->
-      <div class="id-row">
-        <label>Period ID</label>
-        <input type="text" id="inId" placeholder="e.g. 20260525100050310" maxlength="20"/>
-      </div>
-
       <!-- Number 0-9 -->
       <div class="gl">Number</div>
       <div class="ng" id="numGrid"></div>
@@ -151,18 +145,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-ser
       <!-- Colour -->
       <div class="gl">Colour</div>
       <div class="bg" id="colGroup">
-        <button class="ob c-r" data-c="Red" onclick="selCol(this)">🔴 Red</button>
-        <button class="ob c-g" data-c="Green" onclick="selCol(this)">🟢 Green</button>
-        <button class="ob c-v" data-c="Violet" onclick="selCol(this)">🟣 Violet</button>
-        <button class="ob c-rp" data-c="RedViolet" onclick="selCol(this)">🔴🟣 R+V</button>
-        <button class="ob c-gp" data-c="GreenViolet" onclick="selCol(this)">🟢🟣 G+V</button>
+        <button class="ob c-r" data-c="Red" onclick="pickColour(this);return false;">🔴 Red</button>
+        <button class="ob c-g" data-c="Green" onclick="pickColour(this);return false;">🟢 Green</button>
+        <button class="ob c-v" data-c="Violet" onclick="pickColour(this);return false;">🟣 Violet</button>
+        <button class="ob c-rp" data-c="RedViolet" onclick="pickColour(this);return false;">🔴🟣 R+V</button>
+        <button class="ob c-gp" data-c="GreenViolet" onclick="pickColour(this);return false;">🟢🟣 G+V</button>
       </div>
 
       <!-- Size -->
       <div class="gl">Size</div>
       <div class="bg" id="sizeGroup">
-        <button class="ob s-big" data-s="Big" onclick="selSize(this)">📈 Big</button>
-        <button class="ob s-sml" data-s="Small" onclick="selSize(this)">📉 Small</button>
+        <button class="ob s-big" data-s="Big" onclick="pickSize(this);return false;">📈 Big</button>
+        <button class="ob s-sml" data-s="Small" onclick="pickSize(this);return false;">📉 Small</button>
       </div>
 
       <button class="bsave" id="btnSave" onclick="saveTrend();return false;">
