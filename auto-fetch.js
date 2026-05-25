@@ -1,467 +1,412 @@
-/**
- * auto-fetch.js
- * ─────────────────────────────────────────────────────────────────
- * Floating card controller.
- *
- * KEY CHANGE:
- *   Instead of server-side login (which YaarWin blocks with 401),
- *   we READ the game history data DIRECTLY from the YaarWin page
- *   that is already loaded in the iframe.
- *
- *   The YaarWin page stores game records in its Vue/React state
- *   and exposes them in the DOM table rows we can read via
- *   iframe.contentDocument + MutationObserver.
- *
- * Flow:
- *   1. User taps [🎮 WinGo] → iframe loads WinGo page
- *   2. We wait for the game history table to populate (DOM)
- *   3. We scrape the 10 rows from the DOM
- *   4. Send scraped records to fetch-data.php (Path A — no login)
- *   5. fetch-data.php normalises → returns trends
- *   6. api.php runs prediction engine
- *   7. Card shows result
- *
- * Fallback: if DOM scraping fails, send credentials so PHP tries
- * the API directly (Path B — may also fail due to 401).
- */
-
 "use strict";
+/* ═══════════════════════════════════════════════════════
+   auto-fetch.js  —  Manual Trend Entry Controller
+   
+   Flow:
+   1. User taps 🎮 WinGo → entry panel appears
+   2. For each of 10 trends:
+      a. Enter Period ID (optional)
+      b. Tap number button (0-9)
+      c. Tap colour button (Red/Green/Violet/R+V/G+V)
+      d. Tap size button (Big/Small)
+      e. Tap "Save Trend #N" → row saved, next opens
+   3. After 10 saved → "Getting Accurate Result…"
+   4. Sends to fetch-data.php → api.php → shows prediction
+═══════════════════════════════════════════════════════ */
 
-/* ── HARDCODED URLS ──────────────────────────────── */
-var URL_LOGIN = "https://yaarwin.app/#/login";
-var URL_HOME  = "https://yaarwin.app/#/";
-var URL_WINGO = "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
 var FETCH_URL   = "fetch-data.php";
 var PREDICT_URL = "api.php";
-var CRED_KEY    = "yw_creds";
-
 var isMini = false;
-var isBusy = false;
-var trends = [];
+var savedTrends = [];
+var selNum  = null;
+var selCol  = null;
+var selSize = null;
 
-/* Messages shown during the 10-15 sec analysis wait */
-var STEPS = [
-  "📊 Reading game history from page…",
-  "🔄 Parsing WinGo 30s records…",
-  "🧮 Running Calcute.php algorithm…",
-  "📐 Applying Pythonhelp statistical layer…",
-  "🔮 Cross-validating trend patterns…",
-  "🧠 Building confidence matrix…",
-  "✨ Finalising prediction output…"
+var COLOR_MAP = {
+  "Red":"red","Green":"green","Violet":"violet",
+  "RedViolet":"violet","GreenViolet":"violet"
+};
+var SIZE_MAP  = { "Big":"mb","Small":"ms" };
+
+var WAIT_STEPS = [
+  "🔐 Connecting to YaarWin engine…",
+  "📊 Reading 10 trend patterns…",
+  "🔄 Running Calcute algorithm…",
+  "📐 Applying statistical layer…",
+  "🧮 Building confidence matrix…",
+  "✨ Generating prediction…"
 ];
 
-/* ── BOOT ───────────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", function() {
-
-  /* Show cred form if no creds saved */
-  var c = loadCreds();
-  if (!c || !c.phone || !c.pass) {
-    document.getElementById("credForm").style.display = "block";
-    document.getElementById("cMsg").innerHTML = "🔑 Enter Credentials";
-    document.getElementById("cSub").textContent = "Save your YaarWin login to auto-fetch";
-  }
-
-  /* Listen for messages from injected script in iframe */
-  window.addEventListener("message", onIframeMessage);
+/* ── BOOT ── */
+window.addEventListener("DOMContentLoaded", function() {
+  buildNumGrid();
+  setState("login");
 });
 
-/* ── STATE ──────────────────────────────────────── */
+/* ── BUILD 0-9 NUM GRID ── */
+function buildNumGrid() {
+  var g = document.getElementById("numGrid");
+  g.innerHTML = "";
+  for (var i = 0; i <= 9; i++) {
+    (function(n){
+      var b = document.createElement("button");
+      b.className = "nmb";
+      b.textContent = n;
+      b.setAttribute("data-n", n);
+      b.onclick = function(){ selNumber(b); return false; };
+      g.appendChild(b);
+    })(i);
+  }
+}
+
+/* ── STATE ── */
 function setState(s) {
-  var dot   = document.getElementById("cdot");
-  var badge = document.getElementById("cbadge");
-  var msg   = document.getElementById("cMsg");
-  var sub   = document.getElementById("cSub");
-  dot.className = "cdot";
-  switch(s) {
-    case "login":
-      badge.textContent = "Prediction Tool";
-      msg.innerHTML     = "🔐 Login Now To Start";
-      sub.textContent   = "Please log in to yaarwin.app to continue";
-      break;
-    case "home":
-      dot.classList.add("g");
-      badge.textContent = "Connected ✅";
-      msg.innerHTML     = "✅ Login Successful";
-      sub.textContent   = "Tap 🎮 WinGo to get predictions";
-      break;
-    case "fetching":
-      dot.classList.add("y");
-      badge.textContent = "Analyzing…";
-      msg.innerHTML     = 'Fetching The Details <span class="ldots"><span></span><span></span><span></span></span>';
-      sub.textContent   = STEPS[0];
-      break;
-    case "done":
-      dot.classList.add("g");
-      badge.textContent = "Prediction Ready ✅";
-      msg.innerHTML     = "🎯 Next Result Predicted";
-      sub.textContent   = "Based on last 10 WinGo 30s rounds";
-      break;
-    case "error":
-      dot.classList.add("r");
-      badge.textContent = "Error";
-      break;
+  var dot   = document.getElementById("dot");
+  var badge = document.getElementById("badge");
+  var msg   = document.getElementById("msg");
+  var sub   = document.getElementById("sub");
+  dot.className = "dot";
+  if (s==="login") {
+    badge.textContent = "Prediction Tool";
+    msg.innerHTML  = "🔐 Login Now To Start";
+    sub.textContent = "Log in to yaarwin.app, then tap 🎮 WinGo";
+  } else if (s==="home") {
+    dot.classList.add("g");
+    badge.textContent = "Connected ✅";
+    msg.innerHTML  = "✅ Login Successful";
+    sub.textContent = "Tap 🎮 WinGo to start entering trends";
+  } else if (s==="entry") {
+    dot.classList.add("y");
+    badge.textContent = "Entering Trends";
+    msg.innerHTML  = 'Enter Trend <span class="ldots"><span></span><span></span><span></span></span>';
+    sub.textContent = "Fill number, colour & size, then save";
+  } else if (s==="waiting") {
+    dot.classList.add("y");
+    badge.textContent = "Analyzing…";
+    msg.innerHTML  = 'Getting Accurate Result <span class="ldots"><span></span><span></span><span></span></span>';
+    sub.textContent = WAIT_STEPS[0];
+  } else if (s==="done") {
+    dot.classList.add("g");
+    badge.textContent = "Prediction Ready ✅";
+    msg.innerHTML  = "🎯 Next Result Predicted";
+    sub.textContent = "Based on your 10 entered trends";
+  } else if (s==="error") {
+    dot.classList.add("r");
+    badge.textContent = "Error";
   }
 }
 
-/* ── IFRAME NAV ─────────────────────────────────── */
-function goFrame(url) {
-  document.getElementById("siteFrame").src = url;
-}
-
-/* ── NAV HANDLERS ───────────────────────────────── */
-function onNavLogin() {
-  goFrame(URL_LOGIN);
+/* ── IFRAME NAV ── */
+function goLogin() {
+  document.getElementById("frame").src = "https://yaarwin.app/#/login";
   setState("login");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
+  hide("entryPanel"); hide("resultArea"); hide("progBar");
 }
-
-function onNavHome() {
-  goFrame(URL_HOME);
+function goHome() {
+  document.getElementById("frame").src = "https://yaarwin.app/#/";
   setState("home");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
+  hide("entryPanel"); hide("resultArea"); hide("progBar");
+}
+function goWingo() {
+  document.getElementById("frame").src =
+    "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
+  savedTrends = [];
+  selNum = null; selCol = null; selSize = null;
+  resetEntry();
+  setState("entry");
+  show("entryPanel"); show("progBar");
+  hide("resultArea");
+  updateProgress();
+  updateEntryTitle();
 }
 
-function onNavWingo() {
-  goFrame(URL_WINGO);
-  if (!isBusy) {
-    setState("fetching");
-    /* Wait 4 seconds for page to load, then start scraping */
-    setTimeout(function() { runFetch(); }, 4000);
+/* ── RESET ENTRY FORM ── */
+function resetEntry() {
+  /* clear number selection */
+  document.querySelectorAll(".nmb").forEach(function(b){ b.classList.remove("sel"); });
+  /* clear colour */
+  document.querySelectorAll("#colGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
+  /* clear size */
+  document.querySelectorAll("#sizeGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
+  /* clear period id */
+  document.getElementById("inId").value = "";
+  /* reset local vars */
+  selNum = null; selCol = null; selSize = null;
+}
+
+/* ── SELECTION HANDLERS ── */
+function selNumber(btn) {
+  document.querySelectorAll(".nmb").forEach(function(b){ b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  selNum = parseInt(btn.getAttribute("data-n"));
+
+  /* auto-derive colour and size from number — user can override */
+  autoDerive(selNum);
+}
+
+function autoDerive(n) {
+  /* WinGo rules: 0,5=violet; odd=red; even=green; ≥5=Big; <5=Small */
+  var autoC = n===0||n===5 ? "Violet" : (n%2!==0 ? "Red" : "Green");
+  /* Only auto-select if nothing chosen yet */
+  if (!selCol) {
+    document.querySelectorAll("#colGroup .ob").forEach(function(b){
+      b.classList.remove("sel");
+      if (b.getAttribute("data-c")===autoC) { b.classList.add("sel"); selCol=autoC; }
+    });
+  }
+  if (!selSize) {
+    var autoS = n>=5 ? "Big" : "Small";
+    document.querySelectorAll("#sizeGroup .ob").forEach(function(b){
+      b.classList.remove("sel");
+      if (b.getAttribute("data-s")===autoS) { b.classList.add("sel"); selSize=autoS; }
+    });
   }
 }
 
-function onMinBtn() {
+function selCol(btn) {
+  document.querySelectorAll("#colGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  selCol = btn.getAttribute("data-c");
+}
+
+function selSize(btn) {
+  document.querySelectorAll("#sizeGroup .ob").forEach(function(b){ b.classList.remove("sel"); });
+  btn.classList.add("sel");
+  selSize = btn.getAttribute("data-s");
+}
+
+/* ── SAVE TREND ── */
+function saveTrend() {
+  if (selNum === null) { flash("Please select a Number (0-9)"); return; }
+  if (!selCol)         { flash("Please select a Colour"); return; }
+  if (!selSize)        { flash("Please select Size (Big/Small)"); return; }
+
+  var pid = document.getElementById("inId").value.trim();
+  if (!pid) { pid = autoId(); }
+
+  var trend = {
+    trendId: pid,
+    number:  selNum,
+    color:   resolveDisplayColor(selCol),
+    size:    selSize === "Big" ? "MB" : "Ms",
+    bigSmall:selSize,
+    rawColor:selCol
+  };
+
+  savedTrends.push(trend);
+  renderSavedRow(trend, savedTrends.length - 1);
+  updateProgress();
+
+  if (savedTrends.length >= 10) {
+    /* All 10 entered — run prediction */
+    hide("entryPanel");
+    runPrediction();
+  } else {
+    updateEntryTitle();
+    resetEntry();
+    /* Flash success */
+    var n = savedTrends.length;
+    setSubText("✅ Trend " + n + " saved! Enter trend " + (n+1));
+  }
+}
+
+
+/* ── DELETE SAVED TREND ── */
+function deleteTrend(idx) {
+  savedTrends.splice(idx, 1);
+  renderAllSaved();
+  updateProgress();
+  updateEntryTitle();
+  show("entryPanel");
+  hide("resultArea");
+}
+
+/* ── RENDER SAVED ROW ── */
+function renderSavedRow(t, idx) {
+  var list = document.getElementById("savedList");
+  var row = document.createElement("div");
+  row.className = "sv";
+  row.id = "sv_" + idx;
+  var cl  = COLOR_MAP[t.rawColor] || COLOR_MAP[t.color] || "r";
+  var clLabel = colorLabel(t.rawColor, cl);
+  var szCl = t.size === "MB" ? "rb-big" : "rb-sml";
+  row.innerHTML =
+    '<span class="sv-i">' + (idx+1) + '</span>' +
+    '<span class="sv-pid">' + shortId(t.trendId) + '</span>' +
+    '<span class="sv-n">' + t.number + '</span>' +
+    '<span class="sv-c rbadge rb-' + cl + '" style="font-size:10px;padding:2px 5px">' + clLabel + '</span>' +
+    '<span class="sv-s rbadge ' + szCl + '" style="font-size:10px;padding:2px 5px">' + t.bigSmall + '</span>' +
+    '<button class="sv-del" onclick="deleteTrend(' + idx + ');return false;">✕</button>';
+  list.appendChild(row);
+}
+
+function renderAllSaved() {
+  var list = document.getElementById("savedList");
+  list.innerHTML = "";
+  savedTrends.forEach(function(t, i){ renderSavedRow(t, i); });
+}
+
+/* ── UPDATE PROGRESS ── */
+function updateProgress() {
+  var n = savedTrends.length;
+  var pct = Math.round((n/10)*100);
+  document.getElementById("pgTxt").textContent = n + " / 10 trends entered";
+  document.getElementById("pgPct").textContent = pct + "%";
+  document.getElementById("pgFill").style.width = pct + "%";
+}
+
+function updateEntryTitle() {
+  var n = savedTrends.length + 1;
+  if (n <= 10) {
+    document.getElementById("entTitle").textContent = "Enter Trend #" + n;
+    document.getElementById("saveLbl").textContent  = n;
+  }
+}
+
+/* ── RUN PREDICTION ── */
+async function runPrediction() {
+  setState("waiting");
+  show("progBar");
+  hide("resultArea");
+
+  /* Animated wait */
+  var total = 10000 + Math.random() * 5000;
+  var step  = total / WAIT_STEPS.length;
+  var idx   = 0;
+  var timer = setInterval(function(){
+    idx++;
+    if (idx < WAIT_STEPS.length) setSubText(WAIT_STEPS[idx]);
+    else clearInterval(timer);
+  }, step);
+
+  try {
+    /* Build proper trend list for api.php */
+    var trendList = savedTrends.map(function(t) {
+      return {
+        trendId: t.trendId,
+        number:  t.number,
+        color:   t.color,
+        size:    t.size
+      };
+    });
+
+    await new Promise(function(r){ setTimeout(r, total); });
+    clearInterval(timer);
+
+    /* Call api.php prediction engine */
+    var res = await fetch(PREDICT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trends: trendList })
+    });
+    var pred = await res.json();
+    if (pred.status === "error") throw new Error(pred.error);
+
+    renderResult(pred);
+    setState("done");
+
+  } catch(err) {
+    clearInterval(timer);
+    setState("error");
+    document.getElementById("msg").innerHTML = "⚠ " + String(err.message).substring(0,120);
+    setSubText("Tap 🔄 Start Over to try again");
+    show("resultArea");
+    document.getElementById("resultArea").innerHTML =
+      '<button class="bagain" onclick="startOver();return false;">🔄 Enter New 10 Trends</button>';
+  }
+}
+
+/* ── RENDER RESULT ── */
+function renderResult(pred) {
+  var n = pred.predicted_number;
+  document.getElementById("rNum").textContent = (n !== undefined && n !== null) ? n : "—";
+  document.getElementById("rPid").textContent = pred.predicted_trend_id || "Next Period";
+
+  var c = (pred.predicted_color || "").toLowerCase();
+  if (c.includes("violet")) c = "v";
+  else if (c==="red")   c = "r";
+  else if (c==="green") c = "g";
+  var colEl = document.getElementById("rCol");
+  colEl.className = "rbadge rb-" + c;
+  colEl.textContent = pred.predicted_color || "—";
+
+  var s = (pred.predicted_size || "").toLowerCase();
+  var szEl = document.getElementById("rSz");
+  szEl.className = "rbadge " + (s==="mb" ? "rb-big" : "rb-sml");
+  szEl.textContent = s==="mb" ? "🔼 Big" : "🔽 Small";
+
+  var conf = +(pred.confidence || 0);
+  document.getElementById("rConf").textContent = conf + "%";
+  setTimeout(function(){ document.getElementById("rFill").style.width = conf + "%"; }, 80);
+
+  show("resultArea");
+}
+
+/* ── START OVER ── */
+function startOver() {
+  savedTrends = [];
+  selNum = null; selCol = null; selSize = null;
+  resetEntry();
+  renderAllSaved();
+  updateProgress();
+  updateEntryTitle();
+  setState("entry");
+  show("entryPanel"); show("progBar");
+  hide("resultArea");
+}
+
+/* ── MINI / RESTORE ── */
+function doMin() {
   isMini = true;
   document.getElementById("card").classList.add("mini");
 }
-
-function onCardClick() {
+function cardClick() {
   if (isMini) {
     isMini = false;
     document.getElementById("card").classList.remove("mini");
   }
 }
 
-function onBtnGo() {
-  if (!isBusy) {
-    setState("fetching");
-    runFetch();
-  }
+/* ── HELPERS ── */
+function show(id){ var e=document.getElementById(id); if(e) e.style.display="block"; }
+function hide(id){ var e=document.getElementById(id); if(e) e.style.display="none"; }
+function setSubText(t){ document.getElementById("sub").textContent = t; }
+
+function flash(msg) {
+  var s = document.getElementById("sub");
+  s.style.color = "#ef4444";
+  s.textContent = "⚠ " + msg;
+  setTimeout(function(){ s.style.color=""; s.textContent="Fill all fields then save"; }, 2000);
 }
 
-/* ── MESSAGE FROM IFRAME ────────────────────────── */
-function onIframeMessage(event) {
-  /* Accept messages from yaarwin.app */
-  if (!event.origin || !event.origin.includes("yaarwin")) return;
-
-  var d = event.data;
-  if (!d || d.type !== "yw_game_data") return;
-
-  if (Array.isArray(d.records) && d.records.length > 0) {
-    processBrowserRecords(d.records);
-  }
+function autoId() {
+  /* Generate a plausible issueNumber if not entered */
+  var d = new Date();
+  var base = d.getFullYear().toString() +
+    String(d.getMonth()+1).padStart(2,"0") +
+    String(d.getDate()).padStart(2,"0") +
+    "100050" + String(300 + savedTrends.length).padStart(3,"0");
+  return base;
 }
 
-/* ════════════════════════════════════════════════
-   MAIN FETCH PIPELINE
-   ════════════════════════════════════════════════ */
-async function runFetch() {
-  if (isBusy) return;
-  isBusy = true;
-
-  var btn = document.getElementById("btnGo");
-  btn.disabled = true;
-  setState("fetching");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-
-  try {
-    /* ── Step 1: Try to read data from iframe DOM ── */
-    var scraped = tryScrapeDom();
-
-    if (scraped && scraped.length >= 10) {
-      /* Great — got data from DOM, send to PHP to normalise */
-      sub("📊 Got " + scraped.length + " records from page, processing…");
-      await processWithRecords(scraped);
-
-    } else {
-      /* DOM scrape failed — try server-side login as fallback */
-      sub("🔐 DOM scrape failed, trying server login…");
-      await processWithCredentials();
-    }
-
-  } catch (err) {
-    setState("error");
-    document.getElementById("cMsg").innerHTML = "⚠ " + String(err.message).substring(0, 160);
-    document.getElementById("cSub").textContent = "Tap Fetch Again or check credentials below";
-    document.getElementById("resultPanel").style.display = "none";
-    document.getElementById("last10Wrap").style.display  = "none";
-    /* Show cred form so user can update */
-    document.getElementById("credForm").style.display = "block";
-    document.getElementById("cfPhone").value = "";
-    document.getElementById("cfPass").value  = "";
-  } finally {
-    isBusy = false;
-    btn.disabled = false;
-  }
+function shortId(id) {
+  return id.length > 12 ? "…" + id.slice(-8) : id;
 }
 
-/* ────────────────────────────────────────────────
-   DOM SCRAPER — reads game history from iframe page
-   ────────────────────────────────────────────────
-   YaarWin renders game history table with rows containing:
-   - period number (issueNumber)
-   - number (0-9)
-   - Big/Small label
-   - Color dot/badge
-
-   We try to read these rows from the iframe's document.
-   This works because same-origin scraping works when the
-   iframe and parent are on the same domain.
-   
-   Since yaarwin.app ≠ our domain, we use the data attribute
-   approach — we inject a small helper script via the iframe
-   src attribute (using the page's own console data).
-
-   REAL APPROACH: We use the MutationObserver + window.gameData
-   that YaarWin already exposes, which we saw in the console:
-   "gameData ▶ {popular: Proxy(Object), sport: Array...}"
-*/
-function tryScrapeDom() {
-  try {
-    var frame = document.getElementById("siteFrame");
-    var doc   = frame.contentDocument || frame.contentWindow.document;
-
-    /* Try to read game history rows from the DOM table */
-    var records = [];
-
-    /* YaarWin game history table — look for period/number cells */
-    /* The table has rows with columns: Period, Number, Big/Small, Color */
-    var rows = doc.querySelectorAll(
-      '.game-history-item, .history-item, [class*="history"] tr, ' +
-      '.record-item, [class*="record"] tr, .lottery-history tr, ' +
-      'table tbody tr'
-    );
-
-    rows.forEach(function(row) {
-      var cells = row.querySelectorAll('td, .cell, [class*="cell"], span, div');
-      if (cells.length < 2) return;
-
-      /* Try to extract issueNumber and number from text content */
-      var texts = [];
-      cells.forEach(function(c) { texts.push(c.textContent.trim()); });
-
-      /* Find period number (long digit string like 20260525100050307) */
-      var period = "";
-      var num    = -1;
-
-      texts.forEach(function(t) {
-        if (/^\d{15,20}$/.test(t)) period = t;
-        if (/^[0-9]$/.test(t) && num === -1) num = parseInt(t);
-      });
-
-      if (period && num >= 0 && num <= 9) {
-        records.push({
-          issueNumber: period,
-          number: String(num),
-          color: num === 0 || num === 5 ? "red,violet" :
-                 (num % 2 !== 0 ? "red" : "green")
-        });
-      }
-    });
-
-    if (records.length >= 5) return records.slice(0, 10);
-
-    /* ── Fallback: try reading from Vue app state ── */
-    var win = frame.contentWindow;
-    if (win.__vue_store__ || win.__store__ || win.gameData) {
-      /* Try common patterns for Vue/React state */
-      var store = win.__vue_store__ || win.__store__;
-      if (store && store.state) {
-        var state = store.state;
-        /* Look for game records in state */
-        var list = state.gameRecord || state.gameList || state.records;
-        if (Array.isArray(list) && list.length > 0) return list;
-      }
-    }
-
-    return null;
-  } catch(e) {
-    /* Cross-origin error — expected, return null */
-    return null;
-  }
+function resolveDisplayColor(raw) {
+  if (raw==="Red")         return "Red";
+  if (raw==="Green")       return "Green";
+  if (raw==="Violet")      return "Violet";
+  if (raw==="RedViolet")   return "Violet";
+  if (raw==="GreenViolet") return "Violet";
+  return raw;
 }
 
-/* ────────────────────────────────────────────────
-   Process with scraped DOM records
-   ────────────────────────────────────────────────*/
-async function processWithRecords(records) {
-  var res = await fetch(FETCH_URL, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json", "Accept": "application/json" },
-    body:    JSON.stringify({ records: records })
-  });
-  var data = await res.json();
-
-  if (data.status === "error") throw new Error(data.error);
-  if (!Array.isArray(data.trends) || data.trends.length < 1)
-    throw new Error("No trend data could be parsed.");
-
-  await finalisePrediction(data.trends);
-}
-
-/* ────────────────────────────────────────────────
-   Fallback: send credentials → server login
-   ────────────────────────────────────────────────*/
-async function processWithCredentials() {
-  var creds = loadCreds();
-  var body  = "phone=" + encodeURIComponent(creds ? creds.phone : "") +
-              "&pass="  + encodeURIComponent(creds ? creds.pass  : "");
-
-  var res  = await fetch(FETCH_URL, {
-    method:  "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
-    body:    body
-  });
-  var data = await res.json();
-
-  if (data.status === "error") throw new Error(data.error);
-  if (!Array.isArray(data.trends) || data.trends.length < 1)
-    throw new Error("No trend data returned.");
-
-  await finalisePrediction(data.trends);
-}
-
-/* ────────────────────────────────────────────────
-   Process browser records directly (from postMessage)
-   ────────────────────────────────────────────────*/
-async function processBrowserRecords(records) {
-  if (isBusy) return;
-  isBusy = true;
-  var btn = document.getElementById("btnGo");
-  btn.disabled = true;
-  setState("fetching");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-
-  try {
-    await processWithRecords(records);
-  } catch(e) {
-    setState("error");
-    document.getElementById("cMsg").innerHTML = "⚠ " + String(e.message).substring(0, 120);
-    document.getElementById("cSub").textContent = "Tap 🔍 Fetch Next Result to retry";
-  } finally {
-    isBusy = false;
-    btn.disabled = false;
-  }
-}
-
-/* ────────────────────────────────────────────────
-   Common: animate → predict → render
-   ────────────────────────────────────────────────*/
-async function finalisePrediction(trendList) {
-  trends = trendList;
-  renderLast10(trends);
-
-  /* Animated wait 10-15 seconds */
-  await animatedWait(10000, 15000);
-
-  var pred = await callPredict(trends);
-  renderResult(pred);
-  setState("done");
-  document.getElementById("resultPanel").style.display = "block";
-}
-
-async function callPredict(list) {
-  var r = await fetch(PREDICT_URL, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ trends: list })
-  });
-  var d = await r.json();
-  if (d.status === "error") throw new Error(d.error);
-  return d;
-}
-
-/* ── RENDER ─────────────────────────────────────── */
-function renderLast10(list) {
-  var body = document.getElementById("t10Body");
-  body.innerHTML = "";
-  list.forEach(function(t, i) {
-    var cl  = (t.color || "").toLowerCase();
-    var sl  = (t.size || "").toLowerCase() === "mb" ? "mb" : "ms";
-    var row = document.createElement("div");
-    row.className = "t10-row";
-    row.innerHTML =
-      '<span class="t10-i">' + (i+1) + '</span>' +
-      '<span class="t10-pid">' + t.trendId + '</span>' +
-      '<span class="t10-n"><span class="nbadge">' + t.number + '</span></span>' +
-      '<span><span class="pill ' + cl + '">' + (t.color||"?") + '</span></span>' +
-      '<span><span class="spill ' + sl + '">' + (t.bigSmall || t.size || "?") + '</span></span>';
-    body.appendChild(row);
-  });
-  document.getElementById("last10Wrap").style.display = "block";
-}
-
-function renderResult(pred) {
-  document.getElementById("rPid").textContent = pred.predicted_trend_id || "—";
-  document.getElementById("rNum").textContent = pred.predicted_number   || "—";
-  var c = (pred.predicted_color || "").toLowerCase();
-  document.getElementById("rColor").innerHTML =
-    '<span class="pill ' + c + '">' + (pred.predicted_color || "—") + '</span>';
-  var s = (pred.predicted_size || "").toLowerCase();
-  document.getElementById("rSize").innerHTML =
-    '<span class="pill ' + (s === "mb" ? "mb" : "ms") + '">' +
-    (pred.predicted_size === "MB" ? "Big" : "Small") + '</span>';
-  var conf = +(pred.confidence || 0);
-  document.getElementById("rConf").textContent = conf + "%";
-  setTimeout(function() {
-    document.getElementById("rConfBar").style.width = conf + "%";
-  }, 80);
-}
-
-function animatedWait(minMs, maxMs) {
-  var total    = minMs + Math.random() * (maxMs - minMs);
-  var interval = total / STEPS.length;
-  var idx      = 0;
-  var subEl    = document.getElementById("cSub");
-  var timer    = setInterval(function() {
-    idx++;
-    if (idx < STEPS.length) subEl.textContent = STEPS[idx];
-    else clearInterval(timer);
-  }, interval);
-  return new Promise(function(resolve) {
-    setTimeout(function() { clearInterval(timer); resolve(); }, total);
-  });
-}
-
-function sub(text) {
-  document.getElementById("cSub").textContent = text;
-}
-
-/* ── MINI / RESTORE ─────────────────────────────── */
-/* (handled by onclick in HTML) */
-
-/* ── CRED STORAGE ───────────────────────────────── */
-function loadCreds() {
-  try { var d = localStorage.getItem(CRED_KEY); return d ? JSON.parse(d) : null; } catch(_) { return null; }
-}
-function saveCreds(p, pw) {
-  try { localStorage.setItem(CRED_KEY, JSON.stringify({phone:p,pass:pw})); } catch(_) {}
-}
-
-function onSaveCreds() {
-  var p  = document.getElementById("cfPhone").value.trim();
-  var pw = document.getElementById("cfPass").value.trim();
-  if (!p || !pw) {
-    document.getElementById("cfPhone").style.borderColor = "#ef4444";
-    return;
-  }
-  saveCreds(p, pw);
-  document.getElementById("credForm").style.display = "none";
-  document.getElementById("cfPhone").style.borderColor = "";
-  setState("login");
-  alert("✅ Credentials saved! Now use the Login button to log in on the website.");
+function colorLabel(raw, cl) {
+  if (raw==="RedViolet")   return "R+Violet";
+  if (raw==="GreenViolet") return "G+Violet";
+  if (cl==="r") return "Red";
+  if (cl==="g") return "Green";
+  if (cl==="v") return "Violet";
+  return raw || "?";
 }

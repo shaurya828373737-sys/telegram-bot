@@ -1,694 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WinGo Prediction Tool</title>
-  <style>
-    /* ── RESET ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden;
-                 font-family: 'Segoe UI', Tahoma, sans-serif; background: #0a0a14; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WinGo Prediction Tool</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;background:#080814}
+#frame{position:fixed;inset:0;width:100%;height:100%;border:none;z-index:1}
 
-    /* ── FULL-PAGE IFRAME ── */
-    #siteFrame {
-      position: fixed; inset: 0; width: 100%; height: 100%;
-      border: none; z-index: 1;
-      /* iframe must NEVER overlap the floating card */
-    }
+/* ════ CARD ════ */
+#card{position:fixed;bottom:16px;right:14px;width:310px;background:#0d0d24;border:1px solid rgba(139,92,246,.5);border-radius:18px;box-shadow:0 8px 50px rgba(109,40,217,.55);z-index:2147483647;overflow:hidden;pointer-events:all!important}
+#card.mini{width:54px;height:54px;border-radius:50%;cursor:pointer}
+#card.mini #body{display:none}
+#card.mini #mico{display:flex}
+#mico{display:none;width:54px;height:54px;align-items:center;justify-content:center;font-size:22px;pointer-events:none}
+.dbar{width:38px;height:4px;background:#252550;border-radius:2px;margin:11px auto 9px}
+#body{padding:0 14px 13px}
+.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.badge{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:#8b5cf6}
+.dot{width:8px;height:8px;border-radius:50%;background:#8b5cf6;flex-shrink:0;animation:pulse 1.4s infinite}
+.dot.g{background:#22c55e;animation:none}.dot.y{background:#facc15;animation:none}.dot.r{background:#ef4444;animation:none}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.55);opacity:.4}}
+.minbtn{background:#1a1a38;border:none;color:#44447a;font-size:17px;width:25px;height:25px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.minbtn:hover{background:#2a2a50;color:#8b5cf6}
+#msg{font-size:15px;font-weight:700;color:#e8e8ff;line-height:1.4;margin-bottom:3px}
+#sub{font-size:11px;color:#44447a;line-height:1.4}
 
-    /* ════════════════════════════════════════
-       FLOATING CARD  (always on top of iframe)
-    ════════════════════════════════════════ */
-    #card {
-      position: fixed;
-      bottom: 20px; right: 16px;
-      width: 300px;
-      background: #0f0f26;
-      border: 1px solid rgba(139,92,246,.45);
-      border-radius: 20px;
-      box-shadow: 0 8px 48px rgba(109,40,217,.55), 0 2px 12px rgba(0,0,0,.8);
-      z-index: 2147483647; /* max z-index — always above iframe */
-      transition: width .3s ease, height .3s ease, border-radius .3s ease;
-      overflow: hidden;
-      user-select: none;
-      /* CRITICAL: ensure card receives all pointer events */
-      pointer-events: all !important;
-    }
+/* ── progress bar ── */
+#progBar{display:none;margin-top:10px}
+.pg-lbl{display:flex;justify-content:space-between;font-size:10px;color:#44447a;margin-bottom:4px}
+.pg-track{height:4px;background:#12122a;border-radius:99px;overflow:hidden}
+.pg-fill{height:100%;background:linear-gradient(90deg,#6d28d9,#a78bfa);border-radius:99px;transition:width .4s ease;width:0}
 
-    /* minimised bubble */
-    #card.mini {
-      width: 56px; height: 56px;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    #card.mini #cardInner { display: none; }
-    #card.mini #miniIcon  { display: flex; }
+/* ── nav buttons ── */
+.navrow{display:flex;gap:6px;margin-top:10px}
+.nbtn{flex:1;padding:7px 3px;font-size:11px;font-weight:700;border-radius:9px;border:1px solid #1e1e40;background:#14143a;cursor:pointer;text-align:center;transition:all .15s;pointer-events:all!important;-webkit-tap-highlight-color:rgba(139,92,246,.3)}
+.nbtn:active{transform:translateY(1px)}
+#nb1{color:#818cf8}#nb2{color:#34d399}#nb3{color:#facc15;border-color:#2a2a10;background:#1a1a0a}
 
-    #miniIcon {
-      display: none;
-      width: 56px; height: 56px;
-      align-items: center; justify-content: center;
-      font-size: 24px; pointer-events: none;
-    }
+/* ── entry panel ── */
+#entryPanel{display:none;margin-top:11px;padding-top:11px;border-top:1px solid #1a1a38}
+.ent-title{font-size:11px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;text-align:center}
+.id-row{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.id-row label{font-size:10px;color:#44447a;text-transform:uppercase;white-space:nowrap;letter-spacing:.6px}
+.id-row input{flex:1;padding:8px 10px;background:#080818;border:1px solid #252545;border-radius:9px;color:#e0e0f0;font-size:13px;outline:none}
+.id-row input:focus{border-color:#8b5cf6}
+.gl{font-size:10px;color:#44447a;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.bg{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.ob{flex:1;min-width:60px;padding:8px 4px;border-radius:10px;border:2px solid transparent;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .18s;pointer-events:all!important}
 
-    /* ── DRAG HANDLE ── */
-    #cardInner { padding: 0 16px 14px; }
-    .drag-bar {
-      width: 40px; height: 4px;
-      background: #2a2a50; border-radius: 2px;
-      margin: 12px auto 10px;
-    }
+/* number 0-9 grid */
+.ng{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px}
+.nmb{padding:8px;border-radius:8px;border:1px solid #252545;background:#0d0d24;color:#555580;font-size:13px;font-weight:800;cursor:pointer;text-align:center;transition:all .15s;pointer-events:all!important}
+.nmb.sel{background:#6d28d9;border-color:#a78bfa;color:#fff;box-shadow:0 0 10px rgba(109,40,217,.5)}
 
-    /* ── HEADER ROW ── */
-    .c-head {
-      display: flex; align-items: center;
-      justify-content: space-between; margin-bottom: 10px;
-    }
-    .c-badge {
-      display: flex; align-items: center; gap: 7px;
-      font-size: 10px; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 1.4px;
-      color: #8b5cf6;
-    }
-    .cdot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #8b5cf6; flex-shrink: 0;
-      animation: cpulse 1.5s infinite;
-    }
-    .cdot.g { background: #22c55e; animation: none; }
-    .cdot.y { background: #facc15; animation: none; }
-    .cdot.r { background: #ef4444; animation: none; }
-    @keyframes cpulse {
-      0%,100%{ transform:scale(1);   opacity:1; }
-      50%    { transform:scale(1.55);opacity:.4; }
-    }
+/* size */
+.s-big{background:#0a1e3a;color:#93c5fd;border-color:#1e3a5a}.s-big.sel{background:#1e3a5f;border-color:#3b82f6;box-shadow:0 0 8px rgba(59,130,246,.5)}
+.s-sml{background:#181820;color:#d1d5db;border-color:#2a2a3a}.s-sml.sel{background:#1f2937;border-color:#6b7280;box-shadow:0 0 8px rgba(107,114,128,.4)}
 
-    .c-min {
-      background: #1a1a38; border: none; color: #44447a;
-      font-size: 18px; width: 26px; height: 26px;
-      border-radius: 6px; cursor: pointer; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .2s, color .2s;
-    }
-    .c-min:hover { background: #2a2a50; color: #8b5cf6; }
+/* colour */
+.c-r{background:#2d0808;color:#fca5a5;border-color:#4a0f0f}.c-r.sel{background:#7f1d1d;border-color:#ef4444;box-shadow:0 0 10px rgba(239,68,68,.5)}
+.c-g{background:#052810;color:#86efac;border-color:#0a3a18}.c-g.sel{background:#14532d;border-color:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.5)}
+.c-v{background:#1a0545;color:#d8b4fe;border-color:#2d0a60}.c-v.sel{background:#3b0764;border-color:#a855f7;box-shadow:0 0 10px rgba(168,85,247,.5)}
+.c-rp{background:#2d0820;color:#f9a8d4;border-color:#4a0f2a}.c-rp.sel{background:#6b1a3a;border-color:#ec4899;box-shadow:0 0 10px rgba(236,72,153,.5)}
+.c-gp{background:#0a2818;color:#6ee7b7;border-color:#0a3a20}.c-gp.sel{background:#065f46;border-color:#10b981;box-shadow:0 0 10px rgba(16,185,129,.5)}
 
-    /* ── MESSAGE ── */
-    .c-msg {
-      font-size: 15px; font-weight: 700;
-      color: #e8e8ff; line-height: 1.4; margin-bottom: 4px;
-    }
-    .c-sub {
-      font-size: 11px; color: #4a4a7a; line-height: 1.4;
-    }
+/* save btn */
+.bsave{width:100%;padding:11px;background:linear-gradient(135deg,#6d28d9,#a78bfa);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;transition:transform .15s,box-shadow .2s;margin-top:3px}
+.bsave:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(109,40,217,.55)}
+.bsave:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
 
-    /* ── CREDENTIAL FORM (inside card) ── */
-    #credForm {
-      display: none;
-      margin-top: 12px; padding-top: 12px;
-      border-top: 1px solid #1e1e38;
-    }
-    #credForm .cf-label {
-      font-size: 10px; color: #4a4a7a;
-      text-transform: uppercase; letter-spacing: .8px;
-      display: block; margin-bottom: 5px;
-    }
-    #credForm input {
-      width: 100%; padding: 9px 12px;
-      background: #080818; border: 1px solid #2a2a4a;
-      border-radius: 9px; color: #e0e0f0; font-size: 13px;
-      outline: none; margin-bottom: 8px;
-      transition: border-color .2s;
-    }
-    #credForm input:focus { border-color: #8b5cf6; }
-    #credForm input::placeholder { color: #2a2a4a; }
-    .btn-save-creds {
-      width: 100%; padding: 10px;
-      background: linear-gradient(135deg, #6d28d9, #a78bfa);
-      border: none; border-radius: 10px;
-      color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer;
-    }
+/* saved mini list */
+#savedList{margin-top:9px;max-height:115px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#252545 transparent}
+.sv{display:grid;grid-template-columns:18px 1fr 22px 1fr 1fr 20px;gap:4px;align-items:center;padding:4px 5px;background:#0d0d24;border-radius:7px;margin-bottom:3px;font-size:10px}
+.sv-i{color:#333;font-weight:700;text-align:center}.sv-pid{color:#44447a;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv-n{width:20px;height:20px;background:#252545;border-radius:5px;font-size:11px;font-weight:800;color:#a78bfa;text-align:center;line-height:20px}
+.sv-c,.sv-s{padding:2px 5px;border-radius:8px;font-size:10px;font-weight:700;text-align:center}
+.sv-del{background:none;border:none;color:#252545;cursor:pointer;font-size:14px;padding:0;pointer-events:all!important}
+.sv-del:hover{color:#ef4444}
 
-    /* loading dots */
-    .ldots span {
-      display: inline-block; width: 6px; height: 6px;
-      background: #8b5cf6; border-radius: 50%; margin: 0 2px;
-      animation: ldb .75s infinite;
-    }
-    .ldots span:nth-child(2) { animation-delay: .14s; }
-    .ldots span:nth-child(3) { animation-delay: .28s; }
-    @keyframes ldb { 0%,80%,100%{transform:scale(1)} 40%{transform:scale(1.7)} }
+/* result */
+#resultArea{display:none;margin-top:11px;padding-top:11px;border-top:1px solid #1a1a38;animation:fup .4s ease}
+@keyframes fup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.rnext{text-align:center;font-size:10px;color:#44447a;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+.rnum{font-size:62px;font-weight:900;line-height:1;text-align:center;margin-bottom:11px;background:linear-gradient(135deg,#a78bfa,#6d28d9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.rrow{display:flex;gap:7px;justify-content:center;margin-bottom:9px;flex-wrap:wrap}
+.rbadge{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:800}
+.rb-r{background:#7f1d1d;color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.rb-g{background:#14532d;color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.rb-v{background:#3b0764;color:#d8b4fe;border:1px solid rgba(168,85,247,.3)}
+.rb-big{background:#1e3a5f;color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.rb-sml{background:#1f2937;color:#d1d5db;border:1px solid rgba(107,114,128,.3)}
+.rb-pid{background:#0d0d24;color:#c4b5fd;border:1px solid #252545;font-family:monospace;font-size:11px}
+.cconf{margin-top:7px}
+.ccrow{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.cclbl{color:#44447a;text-transform:uppercase;letter-spacing:.7px}.ccpct{color:#8b5cf6;font-weight:800}
+.ctrack{height:5px;border-radius:99px;background:#0a0a18;overflow:hidden}
+.cfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#6d28d9,#a78bfa);width:0;transition:width 1.1s ease}
+.bagain{width:100%;padding:10px;background:#14143a;border:1px solid #252545;border-radius:11px;color:#a78bfa;font-size:13px;font-weight:700;cursor:pointer;margin-top:9px;pointer-events:all!important}
+.bagain:hover{background:#1e1e50}
 
-    /* ── 3 NAV BUTTONS ── */
-    #navRow {
-      display: flex; gap: 6px; margin-top: 11px;
-    }
-    .nav-btn {
-      flex: 1; padding: 8px 4px;
-      font-size: 11px; font-weight: 700;
-      border-radius: 9px; border: 1px solid #1e1e40;
-      background: #14143a; cursor: pointer;
-      transition: background .2s, border-color .2s, transform .1s;
-      white-space: nowrap; text-align: center;
-      pointer-events: all !important;
-      position: relative; z-index: 2;
-      -webkit-tap-highlight-color: rgba(139,92,246,.3);
-    }
-    .nav-btn:hover    { background: #1e1e50; transform: translateY(-1px); }
-    .nav-btn:active   { transform: translateY(0); background: #2a2a60; }
-    #nb-login  { color: #818cf8; }
-    #nb-home   { color: #34d399; }
-    #nb-wingo  { color: #facc15; border-color: #2a2a10; background: #1a1a0a; }
-    #nb-wingo:hover { background: #2a2a10; }
-    #nb-wingo:active { background: #3a3a10; }
-
-    /* ── RESULT PANEL ── */
-    #resultPanel {
-      display: none;
-      margin-top: 13px; padding-top: 12px;
-      border-top: 1px solid #1e1e38;
-      animation: fadeUp .4s ease;
-    }
-    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-
-    /* period id */
-    .res-pid {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #0a0a1c; border: 1px solid #1e1e38;
-      border-radius: 9px; padding: 6px 11px; margin-bottom: 10px;
-    }
-    .res-pid-lbl { font-size: 9px; color: #3a3a5a; text-transform: uppercase; letter-spacing: .9px; }
-    .res-pid-val { font-size: 12px; font-weight: 700; color: #c4b5fd; font-family: monospace; }
-
-    /* big number */
-    .res-num {
-      font-size: 58px; font-weight: 900; line-height: 1;
-      text-align: center; margin: 4px 0 12px;
-      background: linear-gradient(135deg, #a78bfa, #6d28d9);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* color + size grid */
-    .res-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 8px; margin-bottom: 11px;
-    }
-    .res-cell { text-align: center; }
-    .res-lbl  {
-      font-size: 9px; color: #3a3a5a;
-      text-transform: uppercase; letter-spacing: .9px; margin-bottom: 5px;
-    }
-
-    /* pills */
-    .pill {
-      display: inline-block; padding: 5px 14px;
-      border-radius: 20px; font-size: 12px; font-weight: 700;
-    }
-    .pill.red    { background:#3d0808; color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
-    .pill.green  { background:#042810; color:#86efac; border:1px solid rgba(34,197,94,.3); }
-    .pill.violet { background:#1a0545; color:#d8b4fe; border:1px solid rgba(168,85,247,.3); }
-    .pill.mb     { background:#061830; color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
-    .pill.ms     { background:#141820; color:#d1d5db; border:1px solid rgba(107,114,128,.3); }
-
-    /* confidence bar */
-    .conf-row { display:flex; justify-content:space-between; margin-bottom:5px; font-size:11px; }
-    .conf-lbl { color:#3a3a5a; text-transform:uppercase; letter-spacing:.8px; }
-    .conf-pct { color:#8b5cf6; font-weight:800; }
-    .conf-track { height:5px; border-radius:99px; background:#0a0a1c; overflow:hidden; }
-    .conf-fill  { height:100%; border-radius:99px;
-                  background:linear-gradient(90deg,#6d28d9,#a78bfa);
-                  width:0; transition:width 1.2s ease; }
-
-    /* refetch btn */
-    .btn-go {
-      width:100%; padding:11px; margin-top:11px;
-      background:linear-gradient(135deg,#6d28d9,#a78bfa);
-      border:none; border-radius:12px;
-      color:#fff; font-size:13px; font-weight:800;
-      cursor:pointer; letter-spacing:.3px;
-      transition:transform .15s, box-shadow .2s;
-    }
-    .btn-go:hover   { transform:translateY(-2px); box-shadow:0 6px 20px rgba(109,40,217,.55); }
-    .btn-go:active  { transform:translateY(0); }
-    .btn-go:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
-
-    /* last-10 table */
-    #last10Wrap {
-      display: none;
-      margin-top: 13px; padding-top: 12px;
-      border-top: 1px solid #1e1e38;
-    }
-    .t10-title {
-      font-size: 10px; font-weight: 800; color: #6d28d9;
-      text-transform: uppercase; letter-spacing: 1.5px;
-      margin-bottom: 8px; padding-left: 10px;
-      border-left: 3px solid #6d28d9;
-    }
-    .t10-row {
-      display: grid;
-      grid-template-columns: 22px 1fr 28px 52px 42px;
-      gap: 4px; align-items: center;
-      padding: 5px 4px;
-      border-bottom: 1px solid #0f0f20;
-      font-size: 11px;
-    }
-    .t10-row:last-child { border-bottom: none; }
-    .t10-row:hover { background: #11112a; border-radius: 6px; }
-    .t10-i   { color: #2a2a4a; font-weight: 700; text-align: center; }
-    .t10-pid { color: #5a5a8a; font-family: monospace; font-size: 10px;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .t10-n   { text-align: center; }
-    .nbadge  {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 26px; height: 26px; border-radius: 7px;
-      background: #1a1a38; color: #a78bfa;
-      font-size: 13px; font-weight: 800;
-    }
-    .spill {
-      display: inline-block; padding: 3px 6px;
-      border-radius: 10px; font-size: 10px; font-weight: 700;
-    }
-    .spill.mb { background:#061830; color:#93c5fd; }
-    .spill.ms { background:#141820; color:#d1d5db; }
-  </style>
+.ldots span{display:inline-block;width:6px;height:6px;background:#8b5cf6;border-radius:50%;margin:0 2px;animation:lb .75s infinite}
+.ldots span:nth-child(2){animation-delay:.14s}.ldots span:nth-child(3){animation-delay:.28s}
+@keyframes lb{0%,80%,100%{transform:scale(1)}40%{transform:scale(1.7)}}
+</style>
 </head>
 <body>
+<iframe id="frame" src="https://yaarwin.app/#/login" allow="*"
+  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"></iframe>
 
-<!-- ══ FULL-PAGE YAARWIN IFRAME ══ -->
-<iframe
-  id="siteFrame"
-  src="https://yaarwin.app/#/login"
-  allow="*"
-  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
-  title="YaarWin"
-></iframe>
+<div id="card" onclick="cardClick()">
+  <span id="mico">🎯</span>
+  <div class="dbar"></div>
+  <div id="body">
+    <div class="hrow">
+      <div class="badge"><div class="dot" id="dot"></div><span id="badge">Prediction Tool</span></div>
+      <button class="minbtn" onclick="doMin();return false;">−</button>
+    </div>
+    <div id="msg">Login Now To Start</div>
+    <div id="sub">Log in to yaarwin.app, then tap 🎮 WinGo</div>
 
-<!-- ══ FLOATING PREDICTION CARD ══ -->
-<div id="card" onclick="onCardClick()">
-
-  <!-- minimised icon -->
-  <span id="miniIcon">🎯</span>
-
-  <div id="cardInner">
-    <div class="drag-bar"></div>
-
-    <!-- header -->
-    <div class="c-head">
-      <div class="c-badge">
-        <div class="cdot" id="cdot"></div>
-        <span id="cbadge">Prediction Tool</span>
-      </div>
-      <button class="c-min" id="cMinBtn" title="Minimise" onclick="onMinBtn(); return false;">−</button>
+    <!-- progress -->
+    <div id="progBar">
+      <div class="pg-lbl"><span id="pgTxt">0 / 10 trends entered</span><span id="pgPct">0%</span></div>
+      <div class="pg-track"><div class="pg-fill" id="pgFill"></div></div>
     </div>
 
-    <!-- message -->
-    <div class="c-msg" id="cMsg">Login Now To Start</div>
-    <div class="c-sub" id="cSub">Please log in to yaarwin.app to continue</div>
+    <!-- nav buttons -->
+    <div class="navrow">
+      <button class="nbtn" id="nb1" onclick="goLogin();return false;">📱 Login</button>
+      <button class="nbtn" id="nb2" onclick="goHome();return false;">🏠 Home</button>
+      <button class="nbtn" id="nb3" onclick="goWingo();return false;">🎮 WinGo</button>
+    </div>
 
-    <!-- Credential entry form (shown if no creds saved) -->
-    <div id="credForm">
-      <label class="cf-label">📱 Your Phone Number</label>
-      <input type="tel" id="cfPhone" placeholder="e.g. 9876543210" autocomplete="off"/>
-      <label class="cf-label">🔑 Password</label>
-      <input type="password" id="cfPass" placeholder="Your YaarWin password"/>
-      <button class="btn-save-creds" onclick="onSaveCreds(); return false;">
-        💾 Save &amp; Connect
+    <!-- ENTRY PANEL -->
+    <div id="entryPanel">
+      <div class="ent-title" id="entTitle">Enter Trend #1</div>
+
+      <!-- Trend ID (optional) -->
+      <div class="id-row">
+        <label>Period ID</label>
+        <input type="text" id="inId" placeholder="e.g. 20260525100050310" maxlength="20"/>
+      </div>
+
+      <!-- Number 0-9 -->
+      <div class="gl">Number</div>
+      <div class="ng" id="numGrid"></div>
+
+      <!-- Colour -->
+      <div class="gl">Colour</div>
+      <div class="bg" id="colGroup">
+        <button class="ob c-r" data-c="Red" onclick="selCol(this)">🔴 Red</button>
+        <button class="ob c-g" data-c="Green" onclick="selCol(this)">🟢 Green</button>
+        <button class="ob c-v" data-c="Violet" onclick="selCol(this)">🟣 Violet</button>
+        <button class="ob c-rp" data-c="RedViolet" onclick="selCol(this)">🔴🟣 R+V</button>
+        <button class="ob c-gp" data-c="GreenViolet" onclick="selCol(this)">🟢🟣 G+V</button>
+      </div>
+
+      <!-- Size -->
+      <div class="gl">Size</div>
+      <div class="bg" id="sizeGroup">
+        <button class="ob s-big" data-s="Big" onclick="selSize(this)">📈 Big</button>
+        <button class="ob s-sml" data-s="Small" onclick="selSize(this)">📉 Small</button>
+      </div>
+
+      <button class="bsave" id="btnSave" onclick="saveTrend();return false;">
+        💾 Save Trend #<span id="saveLbl">1</span>
       </button>
+
+      <!-- Saved list -->
+      <div id="savedList"></div>
     </div>
 
-    <!-- 3 nav buttons — onclick directly, no external JS dependency -->
-    <div id="navRow">
-      <button class="nav-btn" id="nb-login" onclick="onNavLogin(); return false;">📱 Login</button>
-      <button class="nav-btn" id="nb-home"  onclick="onNavHome();  return false;">🏠 Home</button>
-      <button class="nav-btn" id="nb-wingo" onclick="onNavWingo(); return false;">🎮 WinGo</button>
+    <!-- RESULT -->
+    <div id="resultArea">
+      <div class="rnext">🎯 Next Predicted Result</div>
+      <div class="rnum" id="rNum">—</div>
+      <div class="rrow">
+        <span class="rbadge rb-pid" id="rPid">—</span>
+      </div>
+      <div class="rrow">
+        <span class="rbadge" id="rCol">—</span>
+        <span class="rbadge" id="rSz">—</span>
+      </div>
+      <div class="cconf">
+        <div class="ccrow"><span class="cclbl">Confidence</span><span class="ccpct" id="rConf">—</span></div>
+        <div class="ctrack"><div class="cfill" id="rFill"></div></div>
+      </div>
+      <button class="bagain" onclick="startOver();return false;">🔄 Enter New 10 Trends</button>
     </div>
 
-    <!-- last 10 records table -->
-    <div id="last10Wrap">
-      <div class="t10-title">📋 Last 10 Results</div>
-      <div id="t10Body"></div>
-    </div>
-
-    <!-- prediction result -->
-    <div id="resultPanel">
-
-      <div class="res-pid">
-        <span class="res-pid-lbl">Next Period ID</span>
-        <span class="res-pid-val" id="rPid">—</span>
-      </div>
-
-      <div class="res-num" id="rNum">—</div>
-
-      <div class="res-grid">
-        <div class="res-cell">
-          <div class="res-lbl">Color</div>
-          <div id="rColor">—</div>
-        </div>
-        <div class="res-cell">
-          <div class="res-lbl">Size</div>
-          <div id="rSize">—</div>
-        </div>
-      </div>
-
-      <div class="conf-row">
-        <span class="conf-lbl">Confidence</span>
-        <span class="conf-pct" id="rConf">—</span>
-      </div>
-      <div class="conf-track">
-        <div class="conf-fill" id="rConfBar"></div>
-      </div>
-
-      <button class="btn-go" id="btnGo" onclick="onBtnGo(); return false;">🔍 Fetch Next Result</button>
-
-    </div><!-- /resultPanel -->
-  </div><!-- /cardInner -->
-
+  </div><!-- /body -->
 </div><!-- /card -->
 
-<script>
-/* ══════════════════════════════════════════════
-   All JS inline — no external file dependency
-   Buttons use onclick to guarantee they fire
-══════════════════════════════════════════════ */
-
-/* ── HARDCODED URLS ─────────────────────────── */
-var URL_LOGIN = "https://yaarwin.app/#/login";
-var URL_HOME  = "https://yaarwin.app/#/";
-var URL_WINGO = "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
-var FETCH_URL   = "fetch-data.php";
-var PREDICT_URL = "api.php";
-var CRED_KEY    = "yw_creds";
-
-var isMini = false;
-var isBusy = false;
-var trends = [];
-
-var STEPS = [
-  "🔐 Connecting to YaarWin server…",
-  "📡 Requesting WinGo 30s game history…",
-  "📊 Receiving last 10 completed rounds…",
-  "🔄 Running Calcute.php algorithm…",
-  "📐 Applying Pythonhelp statistical layer…",
-  "🧮 Building confidence matrix…",
-  "✨ Finalising prediction output…"
-];
-
-/* ── STATE ─────────────────────────────────── */
-function setState(s) {
-  var dot   = document.getElementById("cdot");
-  var badge = document.getElementById("cbadge");
-  var msg   = document.getElementById("cMsg");
-  var sub   = document.getElementById("cSub");
-  dot.className = "cdot";
-  if (s === "login") {
-    badge.textContent = "Prediction Tool";
-    msg.innerHTML     = "🔐 Login Now To Start";
-    sub.textContent   = "Please log in to yaarwin.app to continue";
-  } else if (s === "home") {
-    dot.classList.add("g");
-    badge.textContent = "Connected ✅";
-    msg.innerHTML     = "✅ Login Successful";
-    sub.textContent   = "Tap 🎮 WinGo to fetch game results & predict";
-  } else if (s === "fetching") {
-    dot.classList.add("y");
-    badge.textContent = "Analyzing…";
-    msg.innerHTML     = 'Fetching The Details <span class="ldots"><span></span><span></span><span></span></span>';
-    sub.textContent   = STEPS[0];
-  } else if (s === "done") {
-    dot.classList.add("g");
-    badge.textContent = "Prediction Ready ✅";
-    msg.innerHTML     = "🎯 Next Result Predicted";
-    sub.textContent   = "Based on last 10 completed WinGo 30s rounds";
-  } else if (s === "error") {
-    dot.classList.add("r");
-    badge.textContent = "Error";
-  }
-}
-
-/* ── IFRAME NAV ─────────────────────────────── */
-function goFrame(url) {
-  document.getElementById("siteFrame").src = url;
-}
-
-/* ── NAV BUTTON HANDLERS ─────────────────── */
-function onNavLogin() {
-  goFrame(URL_LOGIN);
-  setState("login");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-}
-
-function onNavHome() {
-  goFrame(URL_HOME);
-  setState("home");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-}
-
-function onNavWingo() {
-  goFrame(URL_WINGO);
-  if (!isBusy) {
-    setState("fetching");
-    /* Wait for iframe to load then start fetch */
-    setTimeout(function() { runFetch(); }, 4000);
-  }
-}
-
-/* Also try to inject data reader after WinGo page loads */
-document.getElementById("siteFrame").addEventListener("load", function() {
-  setTimeout(tryInjectReader, 2000);
-});
-
-function tryInjectReader() {
-  try {
-    var frame = document.getElementById("siteFrame");
-    var win   = frame.contentWindow;
-    var href  = "";
-    try { href = win.location.href; } catch(e) { return; }
-
-    if (href.includes("saasLottery") || href.includes("WinGo")) {
-      /* Try to read data from window */
-      try {
-        var data = win.gameData || win.__game_data__ || win.store;
-        if (data) {
-          /* Look for game records */
-          var list = null;
-          if (data.gameRecord) list = data.gameRecord;
-          else if (data.list) list = data.list;
-          else if (Array.isArray(data)) list = data;
-
-          if (Array.isArray(list) && list.length > 0) {
-            if (!isBusy) {
-              setState("fetching");
-              runFetchWithRecords(list);
-            }
-          }
-        }
-      } catch(e2) {}
-    }
-  } catch(e) {}
-}
-
-async function runFetchWithRecords(records) {
-  if (isBusy) return;
-  isBusy = true;
-  var btn = document.getElementById("btnGo");
-  btn.disabled = true;
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-  setState("fetching");
-
-  try {
-    var res = await fetch(FETCH_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ records: records })
-    });
-    var data = await res.json();
-    if (data.status === "error") throw new Error(data.error);
-    if (!Array.isArray(data.trends) || data.trends.length < 1)
-      throw new Error("No trends parsed from records.");
-
-    trends = data.trends;
-    renderLast10(trends);
-    await animatedWait(10000, 15000);
-    var pred = await callPredict(trends);
-    renderResult(pred);
-    setState("done");
-    document.getElementById("resultPanel").style.display = "block";
-  } catch(err) {
-    setState("error");
-    document.getElementById("cMsg").innerHTML = "⚠ " + String(err.message).substring(0, 120);
-    document.getElementById("cSub").textContent = "Tap 🔍 Fetch Next Result to retry";
-    document.getElementById("credForm").style.display = "block";
-  } finally {
-    isBusy = false;
-    btn.disabled = false;
-  }
-}
-
-function onMinBtn() {
-  isMini = true;
-  document.getElementById("card").classList.add("mini");
-}
-
-function onCardClick() {
-  if (isMini) {
-    isMini = false;
-    document.getElementById("card").classList.remove("mini");
-  }
-}
-
-function onBtnGo() {
-  if (!isBusy) runFetch();
-}
-
-/* ── FETCH PIPELINE ─────────────────────── */
-async function runFetch() {
-  if (isBusy) return;
-  isBusy = true;
-  var btn = document.getElementById("btnGo");
-  btn.disabled = true;
-  setState("fetching");
-  document.getElementById("resultPanel").style.display = "none";
-  document.getElementById("last10Wrap").style.display  = "none";
-
-  try {
-    var creds = loadCreds();
-    var body  = "phone=" + encodeURIComponent(creds ? creds.phone : "") +
-                "&pass="  + encodeURIComponent(creds ? creds.pass  : "");
-
-    var res  = await fetch(FETCH_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
-      body:    body
-    });
-    var data = await res.json();
-
-    if (data.status === "error") throw new Error(data.error);
-    if (!Array.isArray(data.trends) || data.trends.length < 1)
-      throw new Error("No trend data returned from YaarWin API.");
-
-    trends = data.trends;
-    renderLast10(trends);
-
-    await animatedWait(10000, 15000);
-
-    var pred = await callPredict(trends);
-    renderResult(pred);
-    setState("done");
-    document.getElementById("resultPanel").style.display = "block";
-
-  } catch (err) {
-    setState("error");
-    var errMsg = String(err.message).substring(0, 160);
-    document.getElementById("cMsg").innerHTML = "⚠ " + errMsg;
-    document.getElementById("cSub").textContent = "Check credentials below and try again";
-    document.getElementById("resultPanel").style.display = "none";
-    document.getElementById("last10Wrap").style.display  = "none";
-    /* Show the credential form again so user can fix */
-    document.getElementById("credForm").style.display = "block";
-    document.getElementById("cfPhone").value = "";
-    document.getElementById("cfPass").value  = "";
-  } finally {
-    isBusy = false;
-    btn.disabled = false;
-  }
-}
-
-async function callPredict(list) {
-  var r = await fetch(PREDICT_URL, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ trends: list })
-  });
-  var d = await r.json();
-  if (d.status === "error") throw new Error(d.error);
-  return d;
-}
-
-function renderLast10(list) {
-  var body = document.getElementById("t10Body");
-  body.innerHTML = "";
-  list.forEach(function(t, i) {
-    var cl  = t.color.toLowerCase();
-    var sl  = t.size.toLowerCase() === "mb" ? "mb" : "ms";
-    var row = document.createElement("div");
-    row.className = "t10-row";
-    row.innerHTML =
-      '<span class="t10-i">' + (i+1) + '</span>' +
-      '<span class="t10-pid">' + t.trendId + '</span>' +
-      '<span class="t10-n"><span class="nbadge">' + t.number + '</span></span>' +
-      '<span><span class="pill ' + cl + '">' + t.color + '</span></span>' +
-      '<span><span class="spill ' + sl + '">' + t.size + '</span></span>';
-    body.appendChild(row);
-  });
-  document.getElementById("last10Wrap").style.display = "block";
-}
-
-function renderResult(pred) {
-  document.getElementById("rPid").textContent = pred.predicted_trend_id || "—";
-  document.getElementById("rNum").textContent = pred.predicted_number   || "—";
-  var c = (pred.predicted_color || "").toLowerCase();
-  document.getElementById("rColor").innerHTML =
-    '<span class="pill ' + c + '">' + (pred.predicted_color || "—") + '</span>';
-  var s = (pred.predicted_size || "").toLowerCase();
-  document.getElementById("rSize").innerHTML =
-    '<span class="pill ' + (s === "mb" ? "mb" : "ms") + '">' + (pred.predicted_size || "—") + '</span>';
-  var conf = +(pred.confidence || 0);
-  document.getElementById("rConf").textContent = conf + "%";
-  setTimeout(function() {
-    document.getElementById("rConfBar").style.width = conf + "%";
-  }, 80);
-}
-
-function animatedWait(minMs, maxMs) {
-  var total    = minMs + Math.random() * (maxMs - minMs);
-  var interval = total / STEPS.length;
-  var idx      = 0;
-  var subEl    = document.getElementById("cSub");
-  var timer    = setInterval(function() {
-    idx++;
-    if (idx < STEPS.length) subEl.textContent = STEPS[idx];
-    else clearInterval(timer);
-  }, interval);
-  return new Promise(function(resolve) {
-    setTimeout(function() { clearInterval(timer); resolve(); }, total);
-  });
-}
-
-function loadCreds() {
-  try { var d = localStorage.getItem(CRED_KEY); return d ? JSON.parse(d) : null; } catch(_) { return null; }
-}
-function saveCreds(p, pw) {
-  try { localStorage.setItem(CRED_KEY, JSON.stringify({phone:p,pass:pw})); } catch(_) {}
-}
-
-/* Show credential form if not saved yet */
-(function() {
-  var c = loadCreds();
-  if (!c || !c.phone || !c.pass) {
-    document.getElementById("credForm").style.display = "block";
-    document.getElementById("cMsg").innerHTML = "🔑 Enter Credentials";
-    document.getElementById("cSub").textContent = "Save your YaarWin login to start";
-  }
-})();
-
-function onSaveCreds() {
-  var p  = document.getElementById("cfPhone").value.trim();
-  var pw = document.getElementById("cfPass").value.trim();
-  if (!p || !pw) {
-    document.getElementById("cfPhone").style.borderColor = "#ef4444";
-    return;
-  }
-  saveCreds(p, pw);
-  document.getElementById("credForm").style.display = "none";
-  document.getElementById("cfPhone").style.borderColor = "";
-  setState("login");
-  alert("✅ Credentials saved! Now log in on the website, then tap 🏠 Home → 🎮 WinGo.");
-}
-</script>
+<script src="auto-fetch.js"></script>
 </body>
 </html>
