@@ -14,10 +14,11 @@
     #siteFrame {
       position: fixed; inset: 0; width: 100%; height: 100%;
       border: none; z-index: 1;
+      /* iframe must NEVER overlap the floating card */
     }
 
     /* ════════════════════════════════════════
-       FLOATING CARD
+       FLOATING CARD  (always on top of iframe)
     ════════════════════════════════════════ */
     #card {
       position: fixed;
@@ -27,10 +28,12 @@
       border: 1px solid rgba(139,92,246,.45);
       border-radius: 20px;
       box-shadow: 0 8px 48px rgba(109,40,217,.55), 0 2px 12px rgba(0,0,0,.8);
-      z-index: 9999;
+      z-index: 2147483647; /* max z-index — always above iframe */
       transition: width .3s ease, height .3s ease, border-radius .3s ease;
       overflow: hidden;
       user-select: none;
+      /* CRITICAL: ensure card receives all pointer events */
+      pointer-events: all !important;
     }
 
     /* minimised bubble */
@@ -120,13 +123,17 @@
       background: #14143a; cursor: pointer;
       transition: background .2s, border-color .2s, transform .1s;
       white-space: nowrap; text-align: center;
+      pointer-events: all !important;
+      position: relative; z-index: 2;
+      -webkit-tap-highlight-color: rgba(139,92,246,.3);
     }
     .nav-btn:hover    { background: #1e1e50; transform: translateY(-1px); }
-    .nav-btn:active   { transform: translateY(0); }
+    .nav-btn:active   { transform: translateY(0); background: #2a2a60; }
     #nb-login  { color: #818cf8; }
     #nb-home   { color: #34d399; }
     #nb-wingo  { color: #facc15; border-color: #2a2a10; background: #1a1a0a; }
     #nb-wingo:hover { background: #2a2a10; }
+    #nb-wingo:active { background: #3a3a10; }
 
     /* ── RESULT PANEL ── */
     #resultPanel {
@@ -251,7 +258,7 @@
 ></iframe>
 
 <!-- ══ FLOATING PREDICTION CARD ══ -->
-<div id="card">
+<div id="card" onclick="onCardClick()">
 
   <!-- minimised icon -->
   <span id="miniIcon">🎯</span>
@@ -265,18 +272,18 @@
         <div class="cdot" id="cdot"></div>
         <span id="cbadge">Prediction Tool</span>
       </div>
-      <button class="c-min" id="cMinBtn" title="Minimise">−</button>
+      <button class="c-min" id="cMinBtn" title="Minimise" onclick="onMinBtn(); return false;">−</button>
     </div>
 
     <!-- message -->
     <div class="c-msg" id="cMsg">Login Now To Start</div>
     <div class="c-sub" id="cSub">Please log in to yaarwin.app to continue</div>
 
-    <!-- 3 nav buttons -->
+    <!-- 3 nav buttons — onclick directly, no external JS dependency -->
     <div id="navRow">
-      <button class="nav-btn" id="nb-login">📱 Login</button>
-      <button class="nav-btn" id="nb-home">🏠 Home</button>
-      <button class="nav-btn" id="nb-wingo">🎮 WinGo</button>
+      <button class="nav-btn" id="nb-login" onclick="onNavLogin(); return false;">📱 Login</button>
+      <button class="nav-btn" id="nb-home"  onclick="onNavHome();  return false;">🏠 Home</button>
+      <button class="nav-btn" id="nb-wingo" onclick="onNavWingo(); return false;">🎮 WinGo</button>
     </div>
 
     <!-- last 10 records table -->
@@ -314,13 +321,229 @@
         <div class="conf-fill" id="rConfBar"></div>
       </div>
 
-      <button class="btn-go" id="btnGo">🔍 Fetch Next Result</button>
+      <button class="btn-go" id="btnGo" onclick="onBtnGo(); return false;">🔍 Fetch Next Result</button>
 
     </div><!-- /resultPanel -->
   </div><!-- /cardInner -->
 
 </div><!-- /card -->
 
-<script src="auto-fetch.js"></script>
+<script>
+/* ══════════════════════════════════════════════
+   All JS inline — no external file dependency
+   Buttons use onclick to guarantee they fire
+══════════════════════════════════════════════ */
+
+/* ── HARDCODED URLS ─────────────────────────── */
+var URL_LOGIN = "https://yaarwin.app/#/login";
+var URL_HOME  = "https://yaarwin.app/#/";
+var URL_WINGO = "https://yaarwin.app/#/saasLottery/WinGo?gameCode=WinGo_30S&lottery=WinGo";
+var FETCH_URL   = "fetch-data.php";
+var PREDICT_URL = "api.php";
+var CRED_KEY    = "yw_creds";
+
+var isMini = false;
+var isBusy = false;
+var trends = [];
+
+var STEPS = [
+  "🔐 Connecting to YaarWin server…",
+  "📡 Requesting WinGo 30s game history…",
+  "📊 Receiving last 10 completed rounds…",
+  "🔄 Running Calcute.php algorithm…",
+  "📐 Applying Pythonhelp statistical layer…",
+  "🧮 Building confidence matrix…",
+  "✨ Finalising prediction output…"
+];
+
+/* ── STATE ─────────────────────────────────── */
+function setState(s) {
+  var dot   = document.getElementById("cdot");
+  var badge = document.getElementById("cbadge");
+  var msg   = document.getElementById("cMsg");
+  var sub   = document.getElementById("cSub");
+  dot.className = "cdot";
+  if (s === "login") {
+    badge.textContent = "Prediction Tool";
+    msg.innerHTML     = "🔐 Login Now To Start";
+    sub.textContent   = "Please log in to yaarwin.app to continue";
+  } else if (s === "home") {
+    dot.classList.add("g");
+    badge.textContent = "Connected ✅";
+    msg.innerHTML     = "✅ Login Successful";
+    sub.textContent   = "Tap 🎮 WinGo to fetch game results & predict";
+  } else if (s === "fetching") {
+    dot.classList.add("y");
+    badge.textContent = "Analyzing…";
+    msg.innerHTML     = 'Fetching The Details <span class="ldots"><span></span><span></span><span></span></span>';
+    sub.textContent   = STEPS[0];
+  } else if (s === "done") {
+    dot.classList.add("g");
+    badge.textContent = "Prediction Ready ✅";
+    msg.innerHTML     = "🎯 Next Result Predicted";
+    sub.textContent   = "Based on last 10 completed WinGo 30s rounds";
+  } else if (s === "error") {
+    dot.classList.add("r");
+    badge.textContent = "Error";
+  }
+}
+
+/* ── IFRAME NAV ─────────────────────────────── */
+function goFrame(url) {
+  document.getElementById("siteFrame").src = url;
+}
+
+/* ── NAV BUTTON HANDLERS ─────────────────── */
+function onNavLogin() {
+  goFrame(URL_LOGIN);
+  setState("login");
+  document.getElementById("resultPanel").style.display = "none";
+  document.getElementById("last10Wrap").style.display  = "none";
+}
+
+function onNavHome() {
+  goFrame(URL_HOME);
+  setState("home");
+  document.getElementById("resultPanel").style.display = "none";
+  document.getElementById("last10Wrap").style.display  = "none";
+}
+
+function onNavWingo() {
+  goFrame(URL_WINGO);
+  if (!isBusy) { setState("fetching"); runFetch(); }
+}
+
+function onMinBtn() {
+  isMini = true;
+  document.getElementById("card").classList.add("mini");
+}
+
+function onCardClick() {
+  if (isMini) {
+    isMini = false;
+    document.getElementById("card").classList.remove("mini");
+  }
+}
+
+function onBtnGo() {
+  if (!isBusy) runFetch();
+}
+
+/* ── FETCH PIPELINE ─────────────────────── */
+async function runFetch() {
+  if (isBusy) return;
+  isBusy = true;
+  var btn = document.getElementById("btnGo");
+  btn.disabled = true;
+  setState("fetching");
+  document.getElementById("resultPanel").style.display = "none";
+  document.getElementById("last10Wrap").style.display  = "none";
+
+  try {
+    var creds = loadCreds();
+    var body  = "phone=" + encodeURIComponent(creds ? creds.phone : "") +
+                "&pass="  + encodeURIComponent(creds ? creds.pass  : "");
+
+    var res  = await fetch(FETCH_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+      body:    body
+    });
+    var data = await res.json();
+
+    if (data.status === "error") throw new Error(data.error);
+    if (!Array.isArray(data.trends) || data.trends.length < 1)
+      throw new Error("No trend data returned from YaarWin API.");
+
+    trends = data.trends;
+    renderLast10(trends);
+
+    await animatedWait(10000, 15000);
+
+    var pred = await callPredict(trends);
+    renderResult(pred);
+    setState("done");
+    document.getElementById("resultPanel").style.display = "block";
+
+  } catch (err) {
+    setState("error");
+    document.getElementById("cMsg").innerHTML = "⚠ " + String(err.message).substring(0, 120);
+    document.getElementById("cSub").textContent = "Tap 🔍 Fetch Next Result to retry";
+    document.getElementById("resultPanel").style.display = "none";
+    document.getElementById("last10Wrap").style.display  = "none";
+  } finally {
+    isBusy = false;
+    btn.disabled = false;
+  }
+}
+
+async function callPredict(list) {
+  var r = await fetch(PREDICT_URL, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ trends: list })
+  });
+  var d = await r.json();
+  if (d.status === "error") throw new Error(d.error);
+  return d;
+}
+
+function renderLast10(list) {
+  var body = document.getElementById("t10Body");
+  body.innerHTML = "";
+  list.forEach(function(t, i) {
+    var cl  = t.color.toLowerCase();
+    var sl  = t.size.toLowerCase() === "mb" ? "mb" : "ms";
+    var row = document.createElement("div");
+    row.className = "t10-row";
+    row.innerHTML =
+      '<span class="t10-i">' + (i+1) + '</span>' +
+      '<span class="t10-pid">' + t.trendId + '</span>' +
+      '<span class="t10-n"><span class="nbadge">' + t.number + '</span></span>' +
+      '<span><span class="pill ' + cl + '">' + t.color + '</span></span>' +
+      '<span><span class="spill ' + sl + '">' + t.size + '</span></span>';
+    body.appendChild(row);
+  });
+  document.getElementById("last10Wrap").style.display = "block";
+}
+
+function renderResult(pred) {
+  document.getElementById("rPid").textContent = pred.predicted_trend_id || "—";
+  document.getElementById("rNum").textContent = pred.predicted_number   || "—";
+  var c = (pred.predicted_color || "").toLowerCase();
+  document.getElementById("rColor").innerHTML =
+    '<span class="pill ' + c + '">' + (pred.predicted_color || "—") + '</span>';
+  var s = (pred.predicted_size || "").toLowerCase();
+  document.getElementById("rSize").innerHTML =
+    '<span class="pill ' + (s === "mb" ? "mb" : "ms") + '">' + (pred.predicted_size || "—") + '</span>';
+  var conf = +(pred.confidence || 0);
+  document.getElementById("rConf").textContent = conf + "%";
+  setTimeout(function() {
+    document.getElementById("rConfBar").style.width = conf + "%";
+  }, 80);
+}
+
+function animatedWait(minMs, maxMs) {
+  var total    = minMs + Math.random() * (maxMs - minMs);
+  var interval = total / STEPS.length;
+  var idx      = 0;
+  var subEl    = document.getElementById("cSub");
+  var timer    = setInterval(function() {
+    idx++;
+    if (idx < STEPS.length) subEl.textContent = STEPS[idx];
+    else clearInterval(timer);
+  }, interval);
+  return new Promise(function(resolve) {
+    setTimeout(function() { clearInterval(timer); resolve(); }, total);
+  });
+}
+
+function loadCreds() {
+  try { var d = localStorage.getItem(CRED_KEY); return d ? JSON.parse(d) : null; } catch(_) { return null; }
+}
+function saveCreds(p, pw) {
+  try { localStorage.setItem(CRED_KEY, JSON.stringify({phone:p,pass:pw})); } catch(_) {}
+}
+</script>
 </body>
 </html>
