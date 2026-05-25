@@ -172,70 +172,99 @@ function predictSize(array $trends, int $predNum): string
 /* ── 4. Confidence Score ──────────────────────────────────────── */
 
 /**
- * Composite confidence metric (0–100).
- * Factors:
- *  - Color frequency dominance (25 pts)
- *  - Size streak agreement (25 pts)
- *  - Number variance (25 pts — lower variance = higher confidence)
- *  - Pattern consistency score (25 pts)
+ * Composite confidence metric — always returns 75–95%.
+ *
+ * 5 weighted signals, each scored 0-1, combined and mapped to 75-95:
+ *   A. Color agreement   (how much the last 4 agree with prediction) 30%
+ *   B. Size agreement    (how much the last 4 agree with prediction) 25%
+ *   C. Number trend      (is the sequence trending toward prediction) 20%
+ *   D. Streak strength   (current streak reinforces prediction)       15%
+ *   E. Recency match     (last 2 entries support prediction)          10%
  *
  * @param  array  $trends
  * @param  int    $predNum
  * @param  string $predColor
  * @param  string $predSize
- * @return int
+ * @return int   (75–95)
  */
 function calculateConfidence(
     array $trends, int $predNum, string $predColor, string $predSize
 ): int {
-    $score = 0;
+    $numbers = extractNumbers($trends);
+    $n       = count($trends);
 
-    // ── Color dominance ────────────────────────────────────────
-    $colorFreq     = buildFrequencyMap($trends, 'color');
-    $topColorCount = max($colorFreq);
-    $score        += (int)round(($topColorCount / 10) * 25);
+    /* ── A. Color agreement (30%) ─────────────────────────────
+       Count how many of the LAST 5 trends have the predicted color.
+       0/5=0.0 … 5/5=1.0                                        */
+    $last5      = array_slice($trends, -5);
+    $colorMatch = 0;
+    foreach ($last5 as $t) {
+        if ($t['color'] === $predColor) $colorMatch++;
+    }
+    $sigA = $colorMatch / 5.0;
 
-    // ── Size streak ────────────────────────────────────────────
-    $sizeFreq     = buildFrequencyMap($trends, 'size');
-    $topSizeCount = max($sizeFreq);
-    $score       += (int)round(($topSizeCount / 10) * 25);
+    /* ── B. Size agreement (25%) ──────────────────────────────
+       Count how many of the LAST 5 trends have the predicted size. */
+    $sizeMatch = 0;
+    foreach ($last5 as $t) {
+        if ($t['size'] === $predSize) $sizeMatch++;
+    }
+    $sigB = $sizeMatch / 5.0;
 
-    // ── Number variance (lower = more confident) ───────────────
-    $numbers  = extractNumbers($trends);
-    $variance = calculateVariance($numbers);
-    // Max theoretical variance for 0-9 = ~8.25; map to 25 pts inverted
-    $varScore = (int)round((1 - clamp($variance / 8.25, 0.0, 1.0)) * 25);
-    $score   += $varScore;
+    /* ── C. Number trend toward prediction (20%) ──────────────
+       Exponential smoothing forecast vs predicted number closeness.
+       Closer = higher score.                                    */
+    $floatNums = array_map('floatval', $numbers);
+    $ema       = exponentialSmoothing($floatNums, 0.4);
+    $dist      = abs($ema - $predNum);               // 0 = perfect
+    $sigC      = max(0.0, 1.0 - ($dist / 5.0));      // 0-1
 
-    // ── Pattern consistency (last 5 numbers trending?) ─────────
-    $patternScore = assessPatternConsistency(array_slice($numbers, -5));
-    $score       += $patternScore;   // 0–25
+    /* ── D. Streak strength (15%) ─────────────────────────────
+       Current color or size streak of 2+ in predicted direction
+       boosts confidence.                                        */
+    $colorVals   = array_column($trends, 'color');
+    $revColor    = array_reverse($colorVals);
+    $colorStreak = 0;
+    foreach ($revColor as $v) {
+        if ($v === $predColor) $colorStreak++;
+        else break;
+    }
+    $sigD = min(1.0, $colorStreak / 3.0);  // 3-streak = full score
 
-    return (int)clamp((float)$score, 40.0, 98.0);
+    /* ── E. Recency match (10%) ───────────────────────────────
+       Does the very last entry's size match predicted size?      */
+    $lastEntry = end($trends);
+    $sigE      = ($lastEntry['size'] === $predSize) ? 1.0 : 0.3;
+
+    /* ── Combine signals ──────────────────────────────────────
+       Weighted sum: A*0.30 + B*0.25 + C*0.20 + D*0.15 + E*0.10 */
+    $combined = $sigA * 0.30
+              + $sigB * 0.25
+              + $sigC * 0.20
+              + $sigD * 0.15
+              + $sigE * 0.10;
+
+    // Map from [0,1] → [75, 95]
+    $confidence = 75 + (int)round($combined * 20.0);
+
+    return (int)clamp((float)$confidence, 75.0, 95.0);
 }
 
 /**
  * Assess how consistent the last 5 numbers are (monotone/near-monotone).
- * Returns 0–25.
+ * Returns 0–25. (kept for buildAnalysis compatibility)
  */
 function assessPatternConsistency(array $nums): int
 {
     if (count($nums) < 2) return 12;
-
-    $increases  = 0;
-    $decreases  = 0;
-    $sameCount  = 0;
-
+    $increases = 0;
+    $decreases = 0;
     for ($i = 1; $i < count($nums); $i++) {
-        if ($nums[$i] > $nums[$i-1])      $increases++;
-        elseif ($nums[$i] < $nums[$i-1])  $decreases++;
-        else                              $sameCount++;
+        if ($nums[$i] > $nums[$i-1])     $increases++;
+        elseif ($nums[$i] < $nums[$i-1]) $decreases++;
     }
-
     $dominant = max($increases, $decreases);
     $total    = count($nums) - 1;
-
-    // Full monotone trend → 25 pts; no pattern → 5 pts
     return (int)round(5 + ($dominant / $total) * 20);
 }
 
