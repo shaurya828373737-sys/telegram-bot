@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WinGo Prediction Rules Chart</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#080814;color:#e0e0f0;min-height:100vh;padding:16px}
+.page{max-width:700px;margin:0 auto}
+
+.hdr{text-align:center;padding:24px 10px 20px;border-bottom:1px solid #1e1e3a;margin-bottom:20px}
+.hdr h1{font-size:22px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#6d28d9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.hdr p{font-size:12px;color:#44447a}
+
+.sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#6d28d9;padding:0 0 8px 12px;border-left:3px solid #6d28d9;margin:20px 0 10px}
+
+table{width:100%;border-collapse:collapse;background:#0d0d24;border-radius:12px;overflow:hidden;margin-bottom:20px}
+th{background:#13133a;padding:10px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#6d28d9;text-align:left}
+td{padding:9px 12px;font-size:13px;border-top:1px solid #1a1a38;vertical-align:middle}
+tr:hover td{background:#11112a}
+.num{font-size:20px;font-weight:900;text-align:center;width:40px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.b-r{background:#7f1d1d;color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.b-g{background:#14532d;color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.b-v{background:#3b0764;color:#d8b4fe;border:1px solid rgba(168,85,247,.3)}
+.b-big{background:#1e3a5f;color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.b-sml{background:#1f2937;color:#d1d5db;border:1px solid rgba(107,114,128,.3)}
+.rule{font-size:12px;color:#888}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.card{background:#0d0d24;border:1px solid #1a1a38;border-radius:12px;padding:14px}
+.card-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#6d28d9;margin-bottom:10px}
+.card-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:12px}
+.card-row:last-child{margin-bottom:0}
+.card-key{color:#666}
+
+.pattern-box{background:#0d0d24;border:1px solid #1a1a38;border-radius:12px;padding:14px;margin-bottom:20px}
+.pb-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px;padding:8px 10px;background:#11112a;border-radius:8px}
+.pb-row:last-child{margin-bottom:0}
+.pb-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;padding-top:1px}
+.pb-text{font-size:12px;line-height:1.5;color:#c4b5fd}
+.pb-text strong{color:#e0e0f0;font-size:13px;display:block;margin-bottom:2px}
+
+.conf-guide{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.cg{flex:1;min-width:80px;background:#0d0d24;border-radius:10px;padding:12px 8px;text-align:center;border:1px solid #1a1a38}
+.cg-num{font-size:18px;font-weight:900;margin-bottom:4px}
+.cg-lbl{font-size:10px;color:#44447a;text-transform:uppercase;letter-spacing:.8px;line-height:1.4}
+.c75{color:#ef4444}.c80{color:#facc15}.c85{color:#a78bfa}.c90{color:#34d399}.c95{color:#22c55e}
+
+.tips{background:#0d0d24;border:1px solid #1a1a38;border-radius:12px;overflow:hidden;margin-bottom:20px}
+.tip{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #1a1a38;font-size:12px;line-height:1.5}
+.tip:last-child{border-bottom:none}
+.tip-icon{font-size:16px;flex-shrink:0;padding-top:1px}
+.tip-txt{color:#c4b5fd}
+.tip-txt strong{color:#e0e0f0;display:block;margin-bottom:2px}
+
+.footer{text-align:center;font-size:11px;color:#2a2a4a;padding:16px 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hdr">
+    <h1>🎯 WinGo 30s — Prediction Rules Chart</h1>
+    <p>Reference guide for best prediction results</p>
+  </div>
+
+  <div class="sec">📊 Core Rules — Number → Colour → Size</div>
+  <table>
+    <thead>
+      <tr><th>Number</th><th>Colour</th><th>Size</th><th>Rule</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="num" style="color:#d8b4fe">0</span></td><td><span class="badge b-r">Red</span> + <span class="badge b-v">Violet</span></td><td><span class="badge b-sml">Small</span></td><td class="rule">Special dual colour</td></tr>
+      <tr><td><span class="num" style="color:#86efac">1</span></td><td><span class="badge b-g">Green</span></td><td><span class="badge b-sml">Small</span></td><td class="rule">Odd → Green · &lt;5 → Small</td></tr>
+      <tr><td><span class="num" style="color:#fca5a5">2</span></td><td><span class="badge b-r">Red</span></td><td><span class="badge b-sml">Small</span></td><td class="rule">Even → Red · &lt;5 → Small</td></tr>
+      <tr><td><span class="num" style="color:#86efac">3</span></td><td><span class="badge b-g">Green</span></td><td><span class="badge b-sml">Small</span></td><td class="rule">Odd → Green · &lt;5 → Small</td></tr>
+      <tr><td><span class="num" style="color:#fca5a5">4</span></td><td><span class="badge b-r">Red</span></td><td><span class="badge b-sml">Small</span></td><td class="rule">Even → Red · &lt;5 → Small</td></tr>
+      <tr><td><span class="num" style="color:#d8b4fe">5</span></td><td><span class="badge b-g">Green</span> + <span class="badge b-v">Violet</span></td><td><span class="badge b-big">Big</span></td><td class="rule">Special dual colour</td></tr>
+      <tr><td><span class="num" style="color:#fca5a5">6</span></td><td><span class="badge b-r">Red</span></td><td><span class="badge b-big">Big</span></td><td class="rule">Even → Red · ≥5 → Big</td></tr>
+      <tr><td><span class="num" style="color:#86efac">7</span></td><td><span class="badge b-g">Green</span></td><td><span class="badge b-big">Big</span></td><td class="rule">Odd → Green · ≥5 → Big</td></tr>
+      <tr><td><span class="num" style="color:#fca5a5">8</span></td><td><span class="badge b-r">Red</span></td><td><span class="badge b-big">Big</span></td><td class="rule">Even → Red · ≥5 → Big</td></tr>
+      <tr><td><span class="num" style="color:#86efac">9</span></td><td><span class="badge b-g">Green</span></td><td><span class="badge b-big">Big</span></td><td class="rule">Odd → Green · ≥5 → Big</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec">⚡ Quick Reference</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">🎨 Colour Rule</div>
+      <div class="card-row"><span class="card-key">Numbers 0, 5</span><span><span class="badge b-v">Violet</span></span></div>
+      <div class="card-row"><span class="card-key">1, 3, 7, 9 (odd)</span><span><span class="badge b-g">Green</span></span></div>
+      <div class="card-row"><span class="card-key">2, 4, 6, 8 (even)</span><span><span class="badge b-r">Red</span></span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📏 Size Rule</div>
+      <div class="card-row"><span class="card-key">0, 1, 2, 3, 4</span><span><span class="badge b-sml">Small</span></span></div>
+      <div class="card-row"><span class="card-key">5, 6, 7, 8, 9</span><span><span class="badge b-big">Big</span></span></div>
+      <div class="card-row"><span class="card-key">3× same streak</span><span style="color:#ef4444;font-weight:800;font-size:12px">→ FLIP !</span></div>
+    </div>
+  </div>
+
+  <div class="sec">🔁 Key Prediction Patterns</div>
+  <div class="pattern-box">
+    <div class="pb-row">
+      <span class="pb-icon">🔄</span>
+      <div class="pb-text"><strong>3-in-a-Row Flip Rule</strong>If Big or Small appears 3 times in a row → next result FLIPS to opposite. Mean reversion is very strong in WinGo.</div>
+    </div>
+    <div class="pb-row">
+      <span class="pb-icon">📈</span>
+      <div class="pb-text"><strong>Number Trend Continuation</strong>If numbers are rising (2→4→6→8) → next likely continues upward. If falling → continues down. Follow the trend.</div>
+    </div>
+    <div class="pb-row">
+      <span class="pb-icon">🟣</span>
+      <div class="pb-text"><strong>Violet Alert (Numbers 0 &amp; 5)</strong>Always produces Violet. If the last 3 results included 0 or 5, watch for another soon — they tend to cluster.</div>
+    </div>
+    <div class="pb-row">
+      <span class="pb-icon">⚠️</span>
+      <div class="pb-text"><strong>Colour Reversion (6+ Rule)</strong>If the same colour appears 6 or more times in your 10 trends → very high chance the NEXT result is a different colour.</div>
+    </div>
+    <div class="pb-row">
+      <span class="pb-icon">⚖️</span>
+      <div class="pb-text"><strong>Balance Law</strong>WinGo balances Big/Small over 10 rounds. If 7 of your last 10 are Big → Small is more probable next. Works both ways.</div>
+    </div>
+  </div>
+
+  <div class="sec">📡 Confidence Score — What It Means</div>
+  <div class="conf-guide">
+    <div class="cg"><div class="cg-num c75">75%</div><div class="cg-lbl">Weak<br/>signal</div></div>
+    <div class="cg"><div class="cg-num c80">80%</div><div class="cg-lbl">Moderate<br/>signal</div></div>
+    <div class="cg"><div class="cg-num c85">85%</div><div class="cg-lbl">Good<br/>signal</div></div>
+    <div class="cg"><div class="cg-num c90">90%</div><div class="cg-lbl">Strong<br/>signal</div></div>
+    <div class="cg"><div class="cg-num c95">95%</div><div class="cg-lbl">Very<br/>strong</div></div>
+  </div>
+
+  <div class="sec">🧠 What Our Engine Reads (5 Signals)</div>
+  <div class="tips">
+    <div class="tip"><span class="tip-icon">🎨</span><div class="tip-txt"><strong>Signal A — Colour Agreement (30%)</strong>How many of the last 5 trends match the predicted colour. 5/5 match = max score.</div></div>
+    <div class="tip"><span class="tip-icon">📏</span><div class="tip-txt"><strong>Signal B — Size Agreement (25%)</strong>How many of the last 5 trends match the predicted size (Big/Small). More matches = more confidence.</div></div>
+    <div class="tip"><span class="tip-icon">📊</span><div class="tip-txt"><strong>Signal C — Number Trend (20%)</strong>Exponential Moving Average of all 10 numbers vs predicted number. Closer = stronger signal.</div></div>
+    <div class="tip"><span class="tip-icon">🔥</span><div class="tip-txt"><strong>Signal D — Colour Streak (15%)</strong>Current consecutive streak in the predicted colour. 3 or more in a row = maximum score.</div></div>
+    <div class="tip"><span class="tip-icon">⏱️</span><div class="tip-txt"><strong>Signal E — Recency Match (10%)</strong>Does the very last entered trend's size agree with the prediction? Recency matters most.</div></div>
+  </div>
+
+  <div class="sec">✅ How to Get Best Results</div>
+  <div class="tips">
+    <div class="tip"><span class="tip-icon">1️⃣</span><div class="tip-txt"><strong>Enter 10 real consecutive trends</strong>Open WinGo Game History tab. Enter the last 10 results in order — oldest at Trend 1, newest at Trend 10.</div></div>
+    <div class="tip"><span class="tip-icon">2️⃣</span><div class="tip-txt"><strong>Use correct colours for 0 and 5</strong>Number 0 = Red+Violet (tap R+V). Number 5 = Green+Violet (tap G+V). These are special rounds.</div></div>
+    <div class="tip"><span class="tip-icon">3️⃣</span><div class="tip-txt"><strong>Act on 85%+ confidence only</strong>Below 80% means the pattern is unclear. Wait for a fresh set of 10 trends if confidence is low.</div></div>
+    <div class="tip"><span class="tip-icon">4️⃣</span><div class="tip-txt"><strong>Re-enter every 2–3 rounds</strong>Patterns shift fast in 30-second rounds. Re-enter new data every 2–3 games for best accuracy.</div></div>
+    <div class="tip"><span class="tip-icon">5️⃣</span><div class="tip-txt"><strong>Watch the streak counter</strong>If Big or Small appears 3 times in your last 3 trends, the engine auto-flips prediction. Trust it.</div></div>
+    <div class="tip"><span class="tip-icon">⚠️</span><div class="tip-txt"><strong>Educational Purpose Only</strong>This tool analyses statistical patterns for learning. No prediction tool is 100% accurate. Play responsibly.</div></div>
+  </div>
+
+  <div class="footer">WinGo 30s Prediction Tool — Educational Reference Chart</div>
+</div>
+</body>
+</html>
